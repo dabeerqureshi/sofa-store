@@ -43,6 +43,12 @@
     return "https://wa.me/" + waNumber() + "?text=" + encodeURIComponent(message);
   }
 
+  /* Before the owner sets a real number, keep WhatsApp CTAs harmless:
+     they never point at an invalid wa.me URL. */
+  function waHref(message) {
+    return waConfigured() ? waLink(message) : "#contact";
+  }
+
   function sofaMessage(sofa) {
     var txt = "Hi " + store.businessName + ', I\'m interested in the "' + sofa.name + '"';
     if (sofa.price) {
@@ -200,7 +206,7 @@
       priceHtml +
       '<div class="sofa-actions">' +
       '<button type="button" class="btn btn-outline btn-details" data-details="' + escapeHtml(s.id) + '">Details</button>' +
-      '<a class="btn btn-wa" href="' + waLink(sofaMessage(s)) + '" target="_blank" rel="noopener" data-wa-sofa="' + escapeHtml(s.id) + '">' +
+      '<a class="btn btn-wa" href="' + waHref(sofaMessage(s)) + '" target="_blank" rel="noopener" data-wa-sofa="' + escapeHtml(s.id) + '">' +
       waIcon() + "<span>WhatsApp</span></a>" +
       "</div></div></article>"
     );
@@ -241,7 +247,7 @@
       '<div class="modal-specs">' + specsHtml(s) + "</div>" +
       '<p class="modal-note">Additional photos, measurements and fabric details are available on WhatsApp.</p>' +
       '<div class="modal-actions">' +
-      '<a class="btn btn-wa btn-lg" href="' + waLink(sofaMessage(s)) + '" target="_blank" rel="noopener" data-wa-sofa="' + escapeHtml(s.id) + '">' +
+      '<a class="btn btn-wa btn-lg" href="' + waHref(sofaMessage(s)) + '" target="_blank" rel="noopener" data-wa-sofa="' + escapeHtml(s.id) + '">' +
       waIcon() + "<span>Order on WhatsApp</span></a>" +
       '<p class="modal-note">Home delivery &bull; Inspect before you pay</p>' +
       "</div></div>";
@@ -270,17 +276,27 @@
 
   modal.addEventListener("click", function (e) {
     if (e.target.closest("[data-close]")) closeModal();
+    var wa = e.target.closest("[data-wa-sofa]");
+    if (wa && !waConfigured()) {
+      e.preventDefault();
+      showToast("WhatsApp number is not set yet — the owner will configure it shortly.");
+    }
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") closeModal();
   });
 
   document.querySelectorAll("[data-wa-link]").forEach(function (a) {
-    a.setAttribute("href", waLink(generalMessage()));
+    var href = waHref(generalMessage());
+    a.setAttribute("href", href);
+    if (href.charAt(0) !== "#") {
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener");
+    }
     if (!waConfigured()) {
       a.addEventListener("click", function (e) {
         e.preventDefault();
-        showToast("WhatsApp number is not set yet - the owner will configure it shortly.");
+        showToast("WhatsApp number is not set yet — the owner will configure it shortly.");
       });
     }
   });

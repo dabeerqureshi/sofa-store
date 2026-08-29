@@ -10,12 +10,15 @@
   <meta name="theme-color" content="#191b22" />
   <link rel="canonical" href="https://dabeerqureshi.github.io/sofa-store/" />
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Montreal Sofa Co." />
+  <meta property="og:locale" content="en_CA" />
   <meta property="og:title" content="Montreal Sofa Co. - Premium Sofas Delivered to Your Door" />
   <meta property="og:description" content="Quality sofas delivered across Montreal. Home delivery, quality checked, inspect before you pay. Order on WhatsApp." />
   <meta property="og:url" content="https://dabeerqureshi.github.io/sofa-store/" />
   <meta property="og:image" content="https://dabeerqureshi.github.io/sofa-store/images/sofa-230.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preload" as="image" href="images/sofa-230.jpg" fetchpriority="high" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -61,7 +64,7 @@
         <a href="#contact">Contact</a>
       </nav>
       <div class="header-actions">
-        <a href="#contact" class="btn btn-wa btn-sm">
+        <a href="#" class="btn btn-wa btn-sm wa-link" data-wa-link>
           <svg class="ic"><use href="#i-wa"/></svg>
           <span>WhatsApp</span>
         </a>
@@ -82,7 +85,7 @@
           <p class="lead">Quality sofas, sofa beds, recliners and sectionals — carefully inspected, delivered across Montreal, and payable only after you've checked them yourself.</p>
           <div class="hero-cta">
             <a href="#catalog" class="btn btn-gold btn-lg">Browse the Collection</a>
-            <a href="#contact" class="btn btn-wa btn-lg">
+            <a href="#" class="btn btn-wa btn-lg wa-link" data-wa-link>
               <svg class="ic"><use href="#i-wa"/></svg>
               <span>Order on WhatsApp</span>
             </a>
@@ -169,6 +172,13 @@
         </div>
 
         <div class="sofa-grid" id="sofaGrid" aria-live="polite"></div>
+
+        <noscript>
+          <div class="empty-state">
+            <h3>Please enable JavaScript</h3>
+            <p>The catalog is powered by JavaScript. Enable it in your browser to browse our sofas, or contact us on WhatsApp and we'll help you directly.</p>
+          </div>
+        </noscript>
 
         <div class="empty-state" id="emptyState" hidden>
           <h3>No sofas match your search</h3>
