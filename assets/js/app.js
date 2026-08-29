@@ -1,376 +1,524 @@
-/* ============================================================
-   Montreal Sofa Co. — app.js
-   Loads store config + sofa catalog from JSON, renders the grid,
-   handles search/filter/sort, WhatsApp links and the detail modal.
-   ============================================================ */
+/* Montreal Sofa Co. — app.js
+   Loads config from data/store.json and the catalogue from data/sofas.json.
+   No dependencies. Works on index.html (featured) and catalog.html (full). */
 (function () {
-  "use strict";
+  'use strict';
 
-  var store = null;
-  var sofas = [];
-  var state = { query: "", seats: "all", type: "all", material: "all", color: "all", sort: "featured" };
+  /* ---------- Helpers ---------- */
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
-  function $(sel) { return document.querySelector(sel); }
-  var grid = $("#sofaGrid");
-  var emptyState = $("#emptyState");
-
-  /* ---------- helpers ---------- */
-  function escapeHtml(str) {
-    return String(str == null ? "" : str)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  function esc(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function waIcon() {
-    return '<svg class="ic" aria-hidden="true"><use href="#i-wa"/></svg>';
+  function debounce(fn, wait) {
+    var t;
+    return function () {
+      var args = arguments, self = this;
+      clearTimeout(t);
+      t = setTimeout(function () { fn.apply(self, args); }, wait);
+    };
   }
 
-  function formatPrice(price) {
-    return "$" + Number(price).toLocaleString("en-CA");
+  var toastTimer = null;
+  function toast(message) {
+    var el = $('.toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'toast';
+      el.setAttribute('role', 'status');
+      document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 3200);
+  }
+
+  function fetchJson(url) {
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error(r.status + ' ' + url);
+      return r.json();
+    });
   }
 
   /* ---------- WhatsApp ---------- */
-  function waNumber() {
-    return store && store.whatsappNumber ? store.whatsappNumber : "00000000000";
-  }
-
-  function waConfigured() {
-    return !!(store && store.whatsappConfigured &&
-      /^\d{7,15}$/.test(store.whatsappNumber));
-  }
+  var WA_READY = false;
+  var WA_NUMBER = '';
 
   function waLink(message) {
-    return "https://wa.me/" + waNumber() + "?text=" + encodeURIComponent(message);
+    if (!WA_READY) return '';
+    var base = 'https://wa.me/' + WA_NUMBER +
+      '?text=' + encodeURIComponent(message || DEFAULT_WA_MESSAGE);
+    return base;
   }
 
-  /* Before the owner sets a real number, keep WhatsApp CTAs harmless:
-     they never point at an invalid wa.me URL. */
-  function waHref(message) {
-    return waConfigured() ? waLink(message) : "#contact";
-  }
+  var DEFAULT_WA_MESSAGE =
+    "Hi Montreal Sofa Co.! I'm interested in one of your sofas. Could you tell me more?";
 
-  function sofaMessage(sofa) {
-    var txt = "Hi " + store.businessName + ', I\'m interested in the "' + sofa.name + '"';
-    if (sofa.price) {
-      txt += " (listed at " + formatPrice(sofa.price) + " CAD)";
-    }
-    txt += ". Is it still available?";
-    return txt;
-  }
-
-  function generalMessage() {
-    return "Hi " + store.businessName +
-      ", I'd like to know more about your sofas and delivery options.";
-  }
-
-  /* ---------- toast ---------- */
-  var toastTimer = null;
-  function showToast(msg) {
-    var el = $("#toast");
-    el.textContent = msg;
-    el.classList.add("is-visible");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove("is-visible"); }, 3400);
-  }
-
-  /* ---------- static sections ---------- */
-  function iconFor(key) {
-    var icons = {
-      truck: '<svg class="ic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M1.5 12.5h3l2.5-6 4 12 3-8 2 2h6.5M15 5.5h3l4.5 4.5v5h-7.5m-12 .5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm13.5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/></svg>',
-      shield: '<svg class="ic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 2 4 5.5v5.1c0 4.9 3.4 9.5 8 10.9 4.6-1.4 8-6 8-10.9V5.5L12 2z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="m8.6 12 2.2 2.2 4.6-4.6"/></svg>',
-      eye: '<svg class="ic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
-      chat: '<svg class="ic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>'
-    };
-    return icons[key] || icons.chat;
-  }
-
-  function renderWhy() {
-    var html = "";
-    (store.valueProps || []).forEach(function (p) {
-      html += '<div class="why-card">' +
-        '<div class="why-icon">' + iconFor(p.icon) + "</div>" +
-        "<h3>" + escapeHtml(p.title) + "</h3>" +
-        "<p>" + escapeHtml(p.text) + "</p></div>";
-    });
-    $("#whyGrid").innerHTML = html;
-    var area = (store.deliveryAreas || []).slice(0, 4).join(", ");
-    $("#whySub").textContent =
-      "Quality checked. Delivered to your door. Serving " +
-      (area.length ? area : store.city) + " & more.";
-  }
-
-  function renderHow() {
-    var html = "";
-    (store.howItWorks || []).forEach(function (h) {
-      html += '<div class="how-card">' +
-        '<span class="how-step">' + escapeHtml(h.step) + "</span>" +
-        "<h3>" + escapeHtml(h.title) + "</h3>" +
-        "<p>" + escapeHtml(h.text) + "</p></div>";
-    });
-    $("#howGrid").innerHTML = html;
-  }
-
-  function renderContact() {
-    $("#serviceArea").textContent = (store.deliveryAreas || []).join(", ");
-    $("#storeHours").textContent = store.hours || "";
-    $("#deliveryNote").textContent = store.deliveryNote || "";
-    $("#footerArea").textContent = "Serving: " + (store.deliveryAreas || []).join(", ");
-    $("#footerHours").textContent = "Hours: " + (store.hours || "");
-    $("#waBtnText").textContent =
-      "Chat on WhatsApp (" + (store.whatsappDisplay || store.whatsappNumber || "") + ")";
-    var hero = $("#heroImg");
-    if (store.heroImage && hero) { hero.src = store.heroImage; }
-    $("#year").textContent = new Date().getFullYear();
-  }
-  /* ---------- catalog render ---------- */
-  function fillSelect(sel, values, firstLabel) {
-    var html = '<option value="all">' + escapeHtml(firstLabel) + "</option>";
-    values.forEach(function (v) {
-      html += '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + "</option>";
-    });
-    sel.innerHTML = html;
-  }
-
-  function buildOptions() {
-    var types = {}, mats = {}, colors = {};
-    sofas.forEach(function (s) {
-      if (s.type) types[s.type] = true;
-      if (s.material) mats[s.material] = true;
-      if (s.color) colors[s.color] = true;
-    });
-    fillSelect($("#typeSelect"), Object.keys(types).sort(), "All types");
-    fillSelect($("#materialSelect"), Object.keys(mats).sort(), "All materials");
-    fillSelect($("#colorSelect"), Object.keys(colors).sort(), "All colors");
-  }
-
-  function filtered() {
-    var q = state.query.trim().toLowerCase();
-    return sofas.filter(function (s) {
-      if (state.seats !== "all" && String(s.seats || "") !== state.seats) return false;
-      if (state.type !== "all" && s.type !== state.type) return false;
-      if (state.material !== "all" && s.material !== state.material) return false;
-      if (state.color !== "all" && s.color !== state.color) return false;
-      if (q) {
-        var hay = (s.name + " " + (s.type || "") + " " + (s.material || "") + " " +
-          (s.color || "") + " " + (s.source || "")).toLowerCase();
-        if (hay.indexOf(q) === -1) return false;
+  /* Delegated clicks for every [data-wa-link] element, on both pages. */
+  document.addEventListener('click', function (ev) {
+    var link = ev.target.closest ? ev.target.closest('[data-wa-link]') : null;
+    if (!link) return;
+    ev.preventDefault();
+    if (!WA_READY) {
+      toast('WhatsApp is being set up — please check back soon!');
+      if (link.getAttribute('data-wa-fallback') === 'contact') {
+        var contact = $('#contact');
+        if (contact) contact.scrollIntoView({ behavior: 'smooth' });
       }
-      return true;
-    });
-  }
-
-  function sorted(list) {
-    var arr = list.slice();
-    if (state.sort === "price-asc" || state.sort === "price-desc") {
-      var sign = state.sort === "price-asc" ? 1 : -1;
-      arr.sort(function (a, b) {
-        var ap = a.price ? 1 : 0, bp = b.price ? 1 : 0;
-        if (ap !== bp) return ap - bp; // priced items always first
-        if (!ap && !bp) return a.name.localeCompare(b.name);
-        return (a.price - b.price) * sign;
-      });
-    } else if (state.sort === "name") {
-      arr.sort(function (a, b) { return a.name.localeCompare(b.name); });
+      return;
     }
-    return arr;
+    window.open(link.getAttribute('data-wa-link'), '_blank', 'noopener');
+  });
+
+  /* ---------- State ---------- */
+  var STATE = {
+    q: '',
+    filters: { seats: null, type: null, material: null, color: null },
+    sort: 'featured'
+  };
+
+  var SORTS = {
+    'featured': function (a, b) {
+      return (b.photos.length - a.photos.length) ||
+             ((b.price ? 1 : 0) - (a.price ? 1 : 0)) ||
+             String(a.id).localeCompare(String(b.id));
+    },
+    'price-asc': function (a, b) {
+      return (a.price != null ? a.price : Infinity) - (b.price != null ? b.price : Infinity) ||
+             String(a.id).localeCompare(String(b.id));
+    },
+    'price-desc': function (a, b) {
+      return (b.price != null ? b.price : -Infinity) - (a.price != null ? a.price : -Infinity) ||
+             String(a.id).localeCompare(String(b.id));
+    },
+    'seats-desc': function (a, b) {
+      return (b.seats || 0) - (a.seats || 0) || String(a.id).localeCompare(String(b.id));
+    },
+    'name-asc': function (a, b) { return a.name.localeCompare(b.name); }
+  };
+
+  function normalizeSofas(raw) {
+    var list = Array.isArray(raw) ? raw
+      : (raw && (raw.products || raw.sofas)) || [];
+    return list
+      .filter(function (s) { return s && s.name && (s.images || s.photos || s.image); })
+      .filter(function (s) { return s.available !== false; })
+      .map(function (s, i) {
+        var photos = (Array.isArray(s.images) && s.images.length && s.images) ||
+                     (Array.isArray(s.photos) && s.photos.length && s.photos) ||
+                     [s.image];
+        return {
+          id: s.id || 's' + (i + 1),
+          name: s.name,
+          price: typeof s.price === 'number' ? s.price : null,
+          seats: s.seats || null,
+          type: s.type || null,
+          material: s.material || null,
+          color: s.color || null,
+          desc: s.description || '',
+          photos: photos
+        };
+      });
   }
 
-  function cardHtml(s, i) {
-    var chips = [];
-    if (s.seats) chips.push(String(s.seats) + "-Seater");
-    if (s.material) chips.push(s.material);
-    if (s.color) chips.push(s.color);
-    var chipHtml = chips.map(function (c) {
-      return '<span class="meta-chip">' + escapeHtml(c) + "</span>";
-    }).join("");
+  function paramValue(name) {
+    var m = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  }
 
-    var priceHtml = s.price
-      ? '<p class="sofa-price"><span class="cur">' + (store.currency || "CAD") + ' </span>' +
-        Number(s.price).toLocaleString("en-CA") + "</p>"
-      : '<p class="sofa-price-request">Price on WhatsApp</p>';
+  /* ---------- Templates ---------- */
+  function priceHtml(sofa) {
+    if (sofa.price != null) {
+      return '<span class="sofa-price">$' + sofa.price.toLocaleString('en-CA') +
+        ' <span class="price-note">CAD</span></span>';
+    }
+    return '<span class="sofa-price">$' +
+      '<span class="price-note">Message for price</span></span>';
+  }
 
-    var tag = s.seats ? String(s.seats) + "-Seater" : (s.type || "Sofa");
-    var tagHtml = s.price ? '<span class="sofa-price-tag">$' + s.price + "</span>" : "";
-
+  function cardHtml(sofa, opts) {
+    opts = opts || {};
+    var tags = [];
+    if (sofa.seats) tags.push(esc(sofa.seats) + '-Seater');
+    if (sofa.type) tags.push(esc(sofa.type));
+    if (sofa.material) tags.push(esc(sofa.material));
+    if (sofa.color) tags.push(esc(sofa.color));
+    var photoCount = sofa.photos.length > 1
+      ? '<span class="sofa-count">' + sofa.photos.length + ' photos</span>' : '';
+    var waMsg = "Hi Montreal Sofa Co.! I'm interested in the " + sofa.name +
+      " (" + priceText(sofa) + "). Is it still available?";
+    var waHref = waLink(waMsg);
+    var waBtn = waHref
+      ? '<a class="btn btn-wa btn-block" data-wa-link href="' + esc(waHref) + '" rel="noopener" aria-label="Order ' + esc(sofa.name) + ' on WhatsApp">' +
+        '<svg width="17" height="17"><use href="#i-wa"/></svg>Order on WhatsApp</a>'
+      : '<a class="btn btn-wa btn-block" data-wa-link href="#" aria-disabled="true" aria-label="Order ' + esc(sofa.name) + ' on WhatsApp">' +
+        '<svg width="17" height="17"><use href="#i-wa"/></svg>Order on WhatsApp</a>';
     return (
-      '<article class="sofa-card" style="animation-delay:' + (i % 12) * 40 + 'ms">' +
-      '<div class="sofa-media">' +
-      '<span class="sofa-tag">' + escapeHtml(tag) + "</span>" +
-      tagHtml +
-      '<img src="' + escapeHtml(s.image) + '" alt="' + escapeHtml(s.name) +
-      '" loading="lazy" width="1200" height="900" onerror="this.style.display=\'none\'" />' +
-      "</div>" +
-      '<div class="sofa-body">' +
-      '<h3 class="sofa-name">' + escapeHtml(s.name) + "</h3>" +
-      (chipHtml ? '<div class="sofa-meta">' + chipHtml + "</div>" : "") +
-      priceHtml +
-      '<div class="sofa-actions">' +
-      '<button type="button" class="btn btn-outline btn-details" data-details="' + escapeHtml(s.id) + '">Details</button>' +
-      '<a class="btn btn-wa" href="' + waHref(sofaMessage(s)) + '" target="_blank" rel="noopener" data-wa-sofa="' + escapeHtml(s.id) + '">' +
-      waIcon() + "<span>WhatsApp</span></a>" +
-      "</div></div></article>"
+      '<article class="sofa-card fade-in" data-id="' + esc(sofa.id) + '">' +
+        '<div class="sofa-media">' + photoCount +
+          '<button type="button" class="sofa-media-btn" data-sofa="' + esc(sofa.id) + '" ' +
+            'aria-label="View details for ' + esc(sofa.name) + '">' +
+            '<img src="' + esc(sofa.photos[0]) + '" alt="' + esc(sofa.name) + '" loading="lazy" width="600" height="450">' +
+          '</button>' +
+        '</div>' +
+        '<div class="sofa-body">' +
+          '<h3>' + esc(sofa.name) + '</h3>' +
+          (tags.length ? '<div class="sofa-meta"><span class="tag tag-accent">' + tags.join('</span><span class="tag">') + '</span></div>' : '') +
+          priceHtml(sofa) +
+          waBtn +
+        '</div>' +
+      '</article>'
     );
   }
 
-  function render() {
-    var list = sorted(filtered());
-    $("#resultCount").textContent = "Showing " + list.length + " of " + sofas.length + " sofas";
-    emptyState.hidden = list.length > 0;
-    grid.innerHTML = list.map(function (s, i) { return cardHtml(s, i); }).join("");
-  }
-  /* ---------- modal ---------- */
-  var modal = $("#sofaModal");
-  var modalBody = $("#modalBody");
-
-  function specsHtml(s) {
-    return '<div class="spec"><b>Type</b><span>' + escapeHtml(s.type || "Sofa") + "</span></div>" +
-      '<div class="spec"><b>Seats</b><span>' + (s.seats ? s.seats + "-Seater" : "Not stated") + "</span></div>" +
-      '<div class="spec"><b>Material</b><span>' + escapeHtml(s.material || "Not stated") + "</span></div>" +
-      '<div class="spec"><b>Color</b><span>' + escapeHtml(s.color || "Not stated") + "</span></div>";
+  function priceText(sofa) {
+    return sofa.price != null ? '$' + sofa.price.toLocaleString('en-CA') + ' CAD' : 'price on request';
   }
 
-  function priceBlock(s) {
-    return s.price
-      ? '<p class="modal-price"><span class="cur">' + (store.currency || "CAD") + " </span>" +
-        Number(s.price).toLocaleString("en-CA") + "</p>"
-      : '<p class="modal-price">Price on request</p>';
+  /* Image-area button should look clickable */
+  document.addEventListener('click', function (ev) {
+    if (ev.target.closest && ev.target.closest('.sofa-media-btn')) {
+      var id = ev.target.closest('.sofa-media-btn').getAttribute('data-sofa');
+      openModal(id);
+    }
+  });
+
+  /* ---------- Filtering ---------- */
+  function normalize(str) { return String(str || '').toLowerCase().trim(); }
+
+  function applyFilters(sofas) {
+    var q = normalize(STATE.q);
+    var words = q ? q.split(/\s+/) : [];
+    var f = STATE.filters;
+    var out = sofas.filter(function (s) {
+      if (f.seats && String(s.seats) !== f.seats) return false;
+      if (f.type && s.type !== f.type) return false;
+      if (f.material && s.material !== f.material) return false;
+      if (f.color && s.color !== f.color) return false;
+      if (!words.length) return true;
+      var hay = normalize([s.name, s.type, s.material, s.color,
+        s.seats ? s.seats + ' seater' : '', s.desc].join(' '));
+      for (var i = 0; i < words.length; i++) {
+        if (hay.indexOf(words[i]) === -1) return false;
+      }
+      return true;
+    });
+    var sorter = SORTS[STATE.sort] || SORTS.featured;
+    return out.sort(sorter);
   }
 
+  function countMatches(sofas) {
+    var f = STATE.filters;
+    return sofas.filter(function (s) {
+      if (f.seats && String(s.seats) !== f.seats) return false;
+      if (f.type && s.type !== f.type) return false;
+      if (f.material && s.material !== f.material) return false;
+      if (f.color && s.color !== f.color) return false;
+      return true;
+    }).length;
+  }
+
+  function renderGrid(root, all) {
+    var list = applyFilters(all);
+    root.innerHTML = list.map(function (s) { return cardHtml(s); }).join('');
+    var meta = $('#results-count');
+    if (meta) {
+      meta.innerHTML = list.length === all.length
+        ? '<span>' + list.length + ' sofas in stock</span>'
+        : '<span class="results-active">' + list.length + ' of ' + all.length +
+          ' sofas match</span>';
+    }
+    var empty = $('#empty-state');
+    if (empty) empty.hidden = list.length !== 0;
+  }
+  /* ---------- Filter chips UI ---------- */
+  function chipRow(label, values, key, counts) {
+    if (!values.length) return '';
+    var chips = values.map(function (v) {
+      var active = STATE.filters[key] === String(v) ? ' active' : '';
+      var n = counts[key][v] || 0;
+      return '<button type="button" class="chip' + active + '" data-filter="' + key +
+        '" data-value="' + esc(v) + '">' + esc(v) +
+        ' <span class="chip-count">' + n + '</span></button>';
+    }).join('');
+    return '<div class="filter-row"><span class="filter-label">' + esc(label) +
+      '</span>' + chips + '</div>';
+  }
+
+  function buildFilters(sofas) {
+    var wrap = $('#filter-groups');
+    if (!wrap) return;
+    var values = { seats: [], type: [], material: [], color: [] };
+    var counts = { seats: {}, type: {}, material: {}, color: {} };
+    sofas.forEach(function (s) {
+      ['seats', 'type', 'material', 'color'].forEach(function (k) {
+        if (!s[k]) return;
+        var v = String(s[k]);
+        if (values[k].indexOf(v) === -1) values[k].push(v);
+        counts[k][v] = (counts[k][v] || 0) + 1;
+      });
+    });
+    values.seats.sort(function (a, b) { return Number(a) - Number(b); });
+    ['type', 'material', 'color'].forEach(function (k) { values[k].sort(); });
+    wrap.innerHTML =
+      chipRow('Seats', values.seats, 'seats', counts) +
+      chipRow('Style', values.type, 'type', counts) +
+      chipRow('Material', values.material, 'material', counts) +
+      chipRow('Colour', values.color, 'color', counts);
+  }
+
+  function bindFilterClicks(sofas, grid) {
+    var wrap = $('#filter-groups');
+    if (!wrap) return;
+    wrap.addEventListener('click', function (ev) {
+      var chip = ev.target.closest ? ev.target.closest('.chip') : null;
+      if (!chip) return;
+      var key = chip.getAttribute('data-filter');
+      var value = chip.getAttribute('data-value');
+      STATE.filters[key] = STATE.filters[key] === value ? null : value;
+      $all('.chip', wrap).forEach(function (c) {
+        var k = c.getAttribute('data-filter');
+        var v = c.getAttribute('data-value');
+        c.classList.toggle('active', STATE.filters[k] === v);
+      });
+      renderGrid(grid, sofas);
+    });
+  }
+
+  function bindClearButton(sofas, grid) {
+    var btn = $('#clear-filters-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      STATE.filters = { seats: null, type: null, material: null, color: null };
+      STATE.q = '';
+      var search = $('#catalog-search');
+      if (search) search.value = '';
+      $all('.chip').forEach(function (c) { c.classList.remove('active'); });
+      renderGrid(grid, sofas);
+    });
+  }
+  /* ---------- Product modal ---------- */
   function openModal(id) {
-    var s = sofas.filter(function (x) { return x.id === id; })[0];
-    if (!s) return;
-    modalBody.innerHTML =
-      '<div class="modal-media"><img src="' + escapeHtml(s.image) + '" alt="' + escapeHtml(s.name) + '" /></div>' +
-      '<div class="modal-details">' +
-      '<h3 class="sofa-name" id="modalTitle">' + escapeHtml(s.name) + "</h3>" +
-      priceBlock(s) +
-      '<div class="modal-specs">' + specsHtml(s) + "</div>" +
-      '<p class="modal-note">Additional photos, measurements and fabric details are available on WhatsApp.</p>' +
-      '<div class="modal-actions">' +
-      '<a class="btn btn-wa btn-lg" href="' + waHref(sofaMessage(s)) + '" target="_blank" rel="noopener" data-wa-sofa="' + escapeHtml(s.id) + '">' +
-      waIcon() + "<span>Order on WhatsApp</span></a>" +
-      '<p class="modal-note">Home delivery &bull; Inspect before you pay</p>' +
-      "</div></div>";
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
-    modal.querySelector(".modal-close").focus();
+    var sofa = CATALOG.filter(function (s) { return s.id === id; })[0];
+    if (!sofa) return;
+    var modal = $('#product-modal');
+    if (!modal) return;
+    var img = $('#modal-image');
+    var thumbWrap = $('#modal-thumbs');
+    img.src = sofa.photos[0];
+    img.alt = sofa.name;
+    if (sofa.photos.length > 1) {
+      thumbWrap.hidden = false;
+      thumbWrap.innerHTML = sofa.photos.map(function (p, i) {
+        return '<button type="button" class="modal-thumb' + (i === 0 ? ' active' : '') +
+          '" data-photo="' + esc(p) + '" aria-label="Photo ' + (i + 1) + ' of ' +
+          esc(sofa.name) + '"><img src="' + esc(p) + '" alt="" loading="lazy"></button>';
+      }).join('');
+    } else {
+      thumbWrap.hidden = true;
+      thumbWrap.innerHTML = '';
+    }
+    $('#modal-title').textContent = sofa.name;
+    $('#modal-price').innerHTML = sofa.price != null
+      ? '$' + sofa.price.toLocaleString('en-CA') + ' <span class="price-note">CAD</span>'
+      : '<span class="price-note">Message us for this price</span>';
+    var meta = [];
+    if (sofa.seats) meta.push(esc(sofa.seats) + '-Seater');
+    if (sofa.type) meta.push(esc(sofa.type));
+    if (sofa.material) meta.push(esc(sofa.material));
+    if (sofa.color) meta.push(esc(sofa.color));
+    $('#modal-meta').innerHTML = meta.length
+      ? meta.map(function (m) { return '<span class="tag">' + m + '</span>'; }).join('')
+      : '';
+    $('#modal-desc').textContent = sofa.desc ||
+      'Premium sofa from our Montreal collection. Quality-checked, delivered to your door, and payable after inspection.';
+    var msg = "Hi Montreal Sofa Co.! I'm interested in the " + sofa.name +
+      " (" + priceText(sofa) + "). Is it still available?";
+    var waBtn = $('#modal-wa-btn');
+    if (WA_READY) {
+      waBtn.setAttribute('href', waLink(msg));
+      waBtn.setAttribute('data-wa-link', waLink(msg));
+      waBtn.removeAttribute('aria-disabled');
+    } else {
+      waBtn.setAttribute('href', '#');
+      waBtn.setAttribute('aria-disabled', 'true');
+    }
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+    var closeBtn = $('.modal-close', modal);
+    if (closeBtn) closeBtn.focus();
   }
 
   function closeModal() {
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = "";
+    var modal = $('#product-modal');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    document.body.classList.remove('modal-open');
   }
 
-  /* ---------- events ---------- */
-  grid.addEventListener("click", function (e) {
-    var detailBtn = e.target.closest("[data-details]");
-    if (detailBtn) { openModal(detailBtn.getAttribute("data-details")); return; }
-    var wa = e.target.closest("[data-wa-sofa]");
-    if (wa && !waConfigured()) {
-      e.preventDefault();
-      showToast("WhatsApp number is not set yet - the owner will configure it shortly.");
-    }
-  });
+  function bindModal() {
+    var modal = $('#product-modal');
+    if (!modal) return;
+    modal.addEventListener('click', function (ev) {
+      if (ev.target.closest('[data-modal-close]')) { closeModal(); return; }
+      var thumb = ev.target.closest('.modal-thumb');
+      if (thumb) {
+        $('#modal-image').src = thumb.getAttribute('data-photo');
+        $all('.modal-thumb', modal).forEach(function (t) { t.classList.remove('active'); });
+        thumb.classList.add('active');
+      }
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') closeModal();
+    });
+  }
 
-  modal.addEventListener("click", function (e) {
-    if (e.target.closest("[data-close]")) closeModal();
-    var wa = e.target.closest("[data-wa-sofa]");
-    if (wa && !waConfigured()) {
-      e.preventDefault();
-      showToast("WhatsApp number is not set yet — the owner will configure it shortly.");
-    }
-  });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") closeModal();
-  });
+  /* ---------- Store config ---------- */
+  var CATALOG = [];
 
-  document.querySelectorAll("[data-wa-link]").forEach(function (a) {
-    var href = waHref(generalMessage());
-    a.setAttribute("href", href);
-    if (href.charAt(0) !== "#") {
-      a.setAttribute("target", "_blank");
-      a.setAttribute("rel", "noopener");
+  function applyStoreConfig(store) {
+    if (!store) return;
+    WA_READY = !!(store.whatsappConfigured && store.whatsappNumber);
+    WA_NUMBER = WA_READY ? String(store.whatsappNumber).replace(/[^0-9]/g, '') : '';
+    if (store.whatsappDefaultMessage) DEFAULT_WA_MESSAGE = store.whatsappDefaultMessage;
+
+    var area = store.deliveryArea || 'Montreal & surrounding areas';
+    var areas = Array.isArray(store.deliveryAreasList) ? store.deliveryAreasList : [];
+    var areaWrap = $('#delivery-areas');
+    if (areaWrap && areas.length) {
+      areaWrap.innerHTML = areas.map(function (a) {
+        return '<span class="area-chip"><svg width="15" height="15"><use href="#i-pin"/></svg>' +
+          esc(a) + '</span>';
+      }).join('') +
+      '<span class="area-chip area-note">+ surrounding areas</span>';
     }
-    if (!waConfigured()) {
-      a.addEventListener("click", function (e) {
-        e.preventDefault();
-        showToast("WhatsApp number is not set yet — the owner will configure it shortly.");
+    var cArea = $('#contact-area');
+    if (cArea) cArea.textContent = area;
+    var fArea = $('#footer-area');
+    if (fArea) fArea.textContent = area;
+    var tagline = store.tagline;
+    if (tagline) {
+      var fTag = $('#footer-tagline');
+      if (fTag) fTag.textContent = tagline;
+    }
+    var hours = store.deliveryHours;
+    if (hours) {
+      var cHours = $('#contact-hours');
+      if (cHours) cHours.textContent = hours;
+    }
+    var waDisplay = store.whatsappDisplay;
+    if (waDisplay && WA_READY) {
+      var cWa = $('#contact-wa-number');
+      if (cWa) cWa.textContent = waDisplay;
+    }
+    var yearEl = $('#copyright-year');
+    if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+  }
+
+  /* ---------- Page init ---------- */
+  function initCatalogPage(sofas) {
+    var grid = $('#catalog-grid');
+    if (!grid) return;
+    buildFilters(sofas);
+    bindFilterClicks(sofas, grid);
+    bindClearButton(sofas, grid);
+    bindModal();
+
+    var search = $('#catalog-search');
+    if (search) {
+      var pre = paramValue('q');
+      if (pre) { STATE.q = pre; search.value = pre; }
+      search.addEventListener('input', debounce(function () {
+        STATE.q = search.value;
+        renderGrid(grid, sofas);
+      }, 160));
+    }
+    var sort = $('#catalog-sort');
+    if (sort) {
+      sort.addEventListener('change', function () {
+        STATE.sort = sort.value;
+        renderGrid(grid, sofas);
       });
     }
-  });
-  /* chips / selects / toolbar */
-  document.querySelectorAll(".seats-filter .chip").forEach(function (chip) {
-    chip.addEventListener("click", function () {
-      document.querySelectorAll(".seats-filter .chip").forEach(function (c) {
-        var active = c === chip;
-        c.classList.toggle("is-active", active);
-        c.setAttribute("aria-pressed", active ? "true" : "false");
+    ['type', 'material', 'seats', 'color'].forEach(function (key) {
+      var v = paramValue(key);
+      if (v) STATE.filters[key] = v;
+    });
+    renderGrid(grid, sofas);
+    $all('.chip').forEach(function (c) {
+      var k = c.getAttribute('data-filter');
+      var v = c.getAttribute('data-value');
+      c.classList.toggle('active', STATE.filters[k] === v);
+    });
+  }
+
+  function initIndexPage(sofas) {
+    var featuredGrid = $('#featured-grid');
+    if (!featuredGrid) return;
+    var featured = sofas.slice(0, 8);
+    featuredGrid.innerHTML = featured.map(function (s) { return cardHtml(s); }).join('');
+  }
+
+  /* ---------- Shared chrome (mobile menu) ---------- */
+  function initChrome() {
+    var toggle = $('#nav-toggle');
+    var nav = $('#main-nav');
+    if (toggle && nav) {
+      toggle.addEventListener('click', function () {
+        var open = nav.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
       });
-      state.seats = chip.getAttribute("data-seats");
-      render();
-    });
-  });
-
-  [["searchInput", "input", "query"], ["typeSelect", "change", "type"],
-   ["materialSelect", "change", "material"], ["colorSelect", "change", "color"],
-   ["sortSelect", "change", "sort"]].forEach(function (cfg) {
-    var el = $("#" + cfg[0]);
-    if (!el) return;
-    el.addEventListener(cfg[1], function () { state[cfg[2]] = el.value; render(); });
-  });
-
-  $("#clearFilters").addEventListener("click", function () {
-    state.query = ""; state.seats = "all"; state.type = "all";
-    state.material = "all"; state.color = "all"; state.sort = "featured";
-    $("#searchInput").value = "";
-    $("#typeSelect").value = "all";
-    $("#materialSelect").value = "all";
-    $("#colorSelect").value = "all";
-    $("#sortSelect").value = "featured";
-    document.querySelectorAll(".seats-filter .chip").forEach(function (c) {
-      var active = c.getAttribute("data-seats") === "all";
-      c.classList.toggle("is-active", active);
-      c.setAttribute("aria-pressed", active ? "true" : "false");
-    });
-    render();
-  });
-
-  /* navigation */
-  var navToggle = $("#navToggle");
-  var siteNav = $("#siteNav");
-  navToggle.addEventListener("click", function () {
-    var open = siteNav.classList.toggle("is-open");
-    navToggle.setAttribute("aria-expanded", open ? "true" : "false");
-  });
-  siteNav.addEventListener("click", function (e) {
-    if (e.target.tagName === "A") {
-      siteNav.classList.remove("is-open");
-      navToggle.setAttribute("aria-expanded", "false");
+      nav.addEventListener('click', function (ev) {
+        if (ev.target.closest('.nav-link')) {
+          nav.classList.remove('open');
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
     }
-  });
+  }
 
-  window.addEventListener("scroll", function () {
-    document.querySelector(".site-header").classList.toggle("is-scrolled", window.scrollY > 10);
-  }, { passive: true });
+  /* ---------- Boot ---------- */
+  function boot() {
+    initChrome();
+    Promise.all([
+      fetchJson('data/store.json'),
+      fetchJson('data/sofas.json')
+    ]).then(function (results) {
+      var store = results[0];
+      var sofas = normalizeSofas(results[1]);
+      CATALOG = sofas;
+      applyStoreConfig(store);
+      initCatalogPage(sofas);
+      initIndexPage(sofas);
+    }).catch(function (err) {
+      console.error('Montreal Sofa Co.: failed to load site data', err);
+      var grid = $('#catalog-grid') || $('#featured-grid');
+      if (grid) {
+        grid.innerHTML = '<p class="noscript-note">We could not load the catalogue. ' +
+          'Please refresh the page in a moment.</p>';
+      }
+      var meta = $('#results-count');
+      if (meta) meta.textContent = 'Catalogue unavailable';
+    });
+  }
 
-  /* ---------- init ---------- */
-  Promise.all([
-    fetch("data/store.json").then(function (r) { return r.json(); }),
-    fetch("data/sofas.json").then(function (r) { return r.json(); })
-  ]).then(function (results) {
-    store = results[0];
-    sofas = (results[1].sofas || []).filter(function (s) { return s.available !== false; });
-    renderWhy();
-    renderHow();
-    renderContact();
-    buildOptions();
-    render();
-  }).catch(function (err) {
-    grid.innerHTML =
-      '<div class="empty-state"><h3>Could not load the catalog</h3>' +
-      "<p>Please try refreshing. If the problem continues, contact the store owner.</p></div>";
-    console.error("Catalog load failed:", err);
-  });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+  /* Debug/test hooks (harmless in production) */
+  window.MSC = {
+    STATE: STATE,
+    normalizeSofas: normalizeSofas,
+    applyFilters: applyFilters,
+    getCatalog: function () { return CATALOG; }
+  };
 })();
