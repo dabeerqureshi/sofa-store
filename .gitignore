@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Raw photo archives (regenerate images/catalog via tools/build_catalog.py)
+/pictures/*.zip
+
+# Editor files
+.vscode/
+.idea/
+*.swp
