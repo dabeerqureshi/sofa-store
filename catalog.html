@@ -97,17 +97,34 @@
           <svg width="18" height="18" class="search-icon"><use href="#i-search"/></svg>
           <input type="search" id="catalog-search" placeholder="Search sofas — try “sectional”, “white”, “leather”…" autocomplete="off" aria-label="Search sofas">
         </div>
-        <div class="toolbar-meta" id="results-count">Loading catalogue…</div>
-        <div class="sort-wrap">
-          <label for="catalog-sort">Sort</label>
-          <select id="catalog-sort">
-            <option value="featured">Featured</option>
-            <option value="seats-desc">Most seats</option>
-            <option value="name-asc">Name A–Z</option>
-          </select>
+        <div class="toolbar-controls">
+          <div class="toolbar-meta" id="results-count">Loading catalogue…</div>
+          <div class="sort-wrap">
+            <label for="catalog-sort">Sort</label>
+            <select id="catalog-sort">
+              <option value="featured">Featured</option>
+              <option value="seats-desc">Most seats</option>
+              <option value="name-asc">Name A–Z</option>
+            </select>
+          </div>
+          <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span>Filters</span>
+            <span class="filter-badge" id="filter-badge" hidden>0</span>
+            <svg class="filter-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
         </div>
       </div>
-      <div class="filter-groups" id="filter-groups"><!-- filter chips injected by app.js --></div>
+      <div class="active-pills" id="active-pills" hidden></div>
+      <div class="filter-panel" id="filter-panel">
+        <div class="filter-panel-inner">
+          <div class="filter-panel-head">
+            <span class="filter-panel-title">Refine your search</span>
+            <button type="button" class="filter-clear" id="filter-clear" hidden>Clear all</button>
+          </div>
+          <div class="filter-groups" id="filter-groups"><!-- filter chips injected by app.js --></div>
+        </div>
+      </div>
     </div>
   </section>
 

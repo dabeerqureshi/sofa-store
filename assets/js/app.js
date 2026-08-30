@@ -283,6 +283,8 @@
         c.classList.toggle('active', STATE.filters[k] === v);
       });
       renderGrid(grid, sofas);
+      updateFilterUi();
+      closeFiltersOnMobile();
     });
   }
 
@@ -290,13 +292,103 @@
     var btn = $('#clear-filters-btn');
     if (!btn) return;
     btn.addEventListener('click', function () {
-      STATE.filters = { seats: null, type: null, material: null, color: null };
+      clearAllFilters(sofas, grid, true);
+    });
+  }
+
+  /* ---------- Collapsible filter panel + active pills ---------- */
+  var FILTER_KEYS = ['seats', 'type', 'material', 'color'];
+
+  function activeFilterCount() {
+    var n = 0;
+    FILTER_KEYS.forEach(function (k) { if (STATE.filters[k]) n++; });
+    return n;
+  }
+
+  function setFiltersOpen(open) {
+    var panel = $('#filter-panel');
+    var toggle = $('#filter-toggle');
+    if (panel) panel.classList.toggle('open', open);
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function filtersOpen() {
+    var panel = $('#filter-panel');
+    return !!(panel && panel.classList.contains('open'));
+  }
+
+  function closeFiltersOnMobile() {
+    if (!filtersOpen()) return;
+    var mobile = window.matchMedia &&
+      window.matchMedia('(max-width: 760px)').matches;
+    if (mobile) setFiltersOpen(false);
+  }
+
+  function renderActivePills() {
+    var wrap = $('#active-pills');
+    if (!wrap) return;
+    var pills = FILTER_KEYS.map(function (k) {
+      var v = STATE.filters[k];
+      if (!v) return '';
+      var label = k === 'seats' ? v + ' seats' : v;
+      return '<button type="button" class="pill" data-filter="' + k +
+        '" data-value="' + esc(v) + '" aria-label="Remove filter ' + esc(label) + '">' +
+        esc(label) +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>';
+    }).join('');
+    wrap.innerHTML = pills;
+    wrap.hidden = !pills;
+  }
+
+  function updateFilterUi() {
+    var n = activeFilterCount();
+    var badge = $('#filter-badge');
+    if (badge) { badge.textContent = String(n); badge.hidden = n === 0; }
+    var toggle = $('#filter-toggle');
+    if (toggle) toggle.classList.toggle('has-active', n > 0);
+    var clearBtn = $('#filter-clear');
+    if (clearBtn) clearBtn.hidden = n === 0;
+    renderActivePills();
+  }
+
+  function clearAllFilters(sofas, grid, includeSearch) {
+    STATE.filters = { seats: null, type: null, material: null, color: null };
+    if (includeSearch) {
       STATE.q = '';
       var search = $('#catalog-search');
       if (search) search.value = '';
-      $all('.chip').forEach(function (c) { c.classList.remove('active'); });
-      renderGrid(grid, sofas);
+    }
+    $all('.chip').forEach(function (c) { c.classList.remove('active'); });
+    renderGrid(grid, sofas);
+    updateFilterUi();
+  }
+
+  function initFilterPanel(sofas, grid) {
+    var toggle = $('#filter-toggle');
+    if (!toggle) return;
+    toggle.addEventListener('click', function () {
+      setFiltersOpen(!filtersOpen());
     });
+    var clearBtn = $('#filter-clear');
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+      clearAllFilters(sofas, grid, false);
+    });
+    var pills = $('#active-pills');
+    if (pills) pills.addEventListener('click', function (ev) {
+      var pill = ev.target.closest ? ev.target.closest('.pill') : null;
+      if (!pill) return;
+      STATE.filters[pill.getAttribute('data-filter')] = null;
+      $all('.chip').forEach(function (c) {
+        var k = c.getAttribute('data-filter');
+        var v = c.getAttribute('data-value');
+        c.classList.toggle('active', STATE.filters[k] === v);
+      });
+      renderGrid(grid, sofas);
+      updateFilterUi();
+    });
+    var fromUrl = FILTER_KEYS.some(function (k) { return paramValue(k); });
+    if (fromUrl) setFiltersOpen(true);
+    updateFilterUi();
   }
   /* ---------- Product modal ---------- */
   function downloadName(sofa, photo, index) {
@@ -447,6 +539,7 @@
     buildFilters(sofas);
     bindFilterClicks(sofas, grid);
     bindClearButton(sofas, grid);
+    initFilterPanel(sofas, grid);
     bindModal();
 
     var search = $('#catalog-search');
@@ -475,6 +568,7 @@
       var v = c.getAttribute('data-value');
       c.classList.toggle('active', STATE.filters[k] === v);
     });
+    updateFilterUi();
   }
 
   function initIndexPage(sofas) {
@@ -499,12 +593,21 @@
         var open = nav.classList.toggle('open');
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        document.body.classList.toggle('nav-open', open);
       });
       nav.addEventListener('click', function (ev) {
-        if (ev.target.closest('.nav-link')) {
+        if (ev.target.closest('.nav-link') || ev.target.closest('[data-wa-link]')) {
           nav.classList.remove('open');
           toggle.setAttribute('aria-expanded', 'false');
+          document.body.classList.remove('nav-open');
         }
+      });
+      document.addEventListener('click', function (ev) {
+        if (!nav.classList.contains('open')) return;
+        if (ev.target.closest('#main-nav') || ev.target.closest('#nav-toggle')) return;
+        nav.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('nav-open');
       });
     }
   }
