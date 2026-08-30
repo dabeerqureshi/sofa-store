@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sofas for Sale in Montreal — Browse 250+ Sofas in Stock | Montreal Sofa Co.</title>
-<meta name="description" content="Browse 250+ sofas for sale in Montreal: sofa beds, sectionals, recliners, leather &amp; corduroy couches. Filter by size, style and colour. Home delivery to Laval &amp; Longueuil. Inspect before you pay.">
+<meta name="description" content="Browse 250+ sofas for sale in Montreal: sofa beds, sectionals, recliners, leather &amp; corduroy couches. Filter by size, style and colour. Sunday delivery across Montreal, cash on delivery. Order on WhatsApp.">
 <meta name="keywords" content="sofa catalogue Montreal, sofas for sale Montreal, sectional sofa Montreal, sofa bed Montreal, leather couch Montreal, recliner Montreal, furniture sale Montreal">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="geo.region" content="CA-QC">
@@ -40,6 +40,7 @@
 </script>
 </head>
 <body>
+<div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.89-11.893a11.821 11.821 0 00-3.48-8.413z"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.4-3.4"/></symbol>
@@ -86,7 +87,11 @@
     <div class="container">
       <span class="eyebrow">Montreal furniture · In stock now</span>
       <h1>Sofas for Sale in Montreal</h1>
-      <p>Browse <span data-stock-count>250</span> sofas in stock right now — sofa beds, sectionals, recliners, and leather &amp; corduroy couches. Every piece is quality-checked, delivered to your door anywhere in Montreal, Laval or Longueuil, and payable only after inspection. Contact us for pricing on any piece: tap a photo for details, or message us on WhatsApp.</p>
+      <p>Browse <span data-stock-count>250</span> sofas in stock right now — sofa beds, sectionals, recliners, and leather &amp; corduroy couches. Every piece is quality-checked, delivered to your door anywhere in Montreal every Sunday, and payable in cash only after inspection. Contact us for pricing on any piece: tap a photo for details, or message us on WhatsApp.</p>
+      <div class="usp-row">
+        <span class="usp">Every Sunday · Montreal</span>
+        <span class="usp">Cash on Delivery</span>
+      </div>
     </div>
   </section>
 
@@ -150,6 +155,8 @@
     <div class="modal-media">
       <figure class="modal-figure"><img id="modal-image" src="" alt="" width="900" height="700"></figure>
       <div class="modal-media-actions">
+        <button type="button" class="btn btn-media" id="modal-room" aria-pressed="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 21 7v10l-9 5-9-5V7l9-5Z"/><path d="M12 12 21 7M12 12v10M12 12 3 7"/></svg>3D Room</button>
         <a id="modal-download" class="btn btn-media" href="#" download>
           <svg width="16" height="16"><use href="#i-download"/></svg>Download Image</a>
         <a id="modal-full" class="btn btn-media" href="#" target="_blank" rel="noopener">
@@ -161,6 +168,7 @@
       <span class="tag tag-accent" id="modal-tag">In stock</span>
       <h2 id="modal-title">Sofa</h2>
       <p class="modal-price" id="modal-price"></p>
+      <div class="usp-row usp-mini"><span class="usp">Every Sunday · Montreal</span><span class="usp">Cash on Delivery</span></div>
       <div class="modal-meta" id="modal-meta"></div>
       <p class="modal-desc" id="modal-desc"></p>
       <ul class="modal-features">
@@ -209,7 +217,7 @@
   </div>
   <div class="container footer-base">
     <span>© <span id="copyright-year">2026</span> Montreal Sofa Co. All rights reserved.</span>
-    <span>Serving Montreal, Laval, Longueuil &amp; the South Shore</span>
+    <span>Serving all Montreal boroughs · Deliveries every Sunday</span>
   </div>
 </footer>
 

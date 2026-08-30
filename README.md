@@ -18,21 +18,23 @@ Open **`data/store.json`** and set your real number:
 - `whatsappNumber` — your WhatsApp number **without** `+` or spaces, country code first (e.g. `15145551234`)
 - `whatsappConfigured` — `true` means every WhatsApp button on the site is live
 
-The site never displays a phone number — visitors just tap **WhatsApp** buttons that open a chat with a pre-filled message. The number currently in `store.json` is a **placeholder**: replace it with your real one before sharing the site with customers.
+The site never displays a phone number — visitors just tap **WhatsApp** buttons that open a chat with a pre-filled message. The WhatsApp number is configured in `store.json` and every button on the site picks it up automatically.
 
 You can also adjust the tagline, service area, delivery areas, hours and delivery note in the same file.
 
+**Business model:** we deliver **only inside Montreal** (every borough), **only on Sundays**, and buyers **pay cash on delivery** after inspecting the sofa. All copy, schema.org data and pre-filled WhatsApp messages reflect this.
+
 ## 📄 Pages
 
-Your site is a single page with sections:
+Your site has a home page and a catalogue page:
 
-- **Home / Hero** — brand, tagline, trust badges
-- **Why Us** — delivery, quality, inspect-before-pay, WhatsApp ordering
+- **Home / Hero** — brand, tagline, animated USP badges (Every Sunday · Cash on Delivery), trust list
+- **Why Us** — Sunday delivery, quality, cash on delivery, WhatsApp ordering
 - **Catalog** — all sofas in stock, with search + filters (seats, type, material, color) + sort
   - pricing is **contact-only**: every card shows a **Contact for Pricing** badge — no prices are published anywhere on the site
-  - every sofa has a **💬 WhatsApp button** that sends a pre-filled message naming that exact sofa and asking for the price
-  - click any photo for full details: the full-size (uncropped) image, thumbnails, a **⬇ Download Image** button and a **View Full Image** link
-- **How It Works** — the 4-step buying process
+  - every sofa has a **💬 WhatsApp button** that sends a pre-filled message naming that exact sofa and asking about Sunday delivery + cash price
+  - click any photo for full details: full-size (uncropped) image, thumbnails, a **⬇ Download Image** button, a **View Full Image** link, a **3D Room** turntable view, a hover zoom loupe and double-tap zoom
+- **How It Works** — choose → WhatsApp → book a Sunday slot → inspect & pay cash
 - **About** — brand story
 - **Contact** — WhatsApp CTA, service area, hours, delivery note
 - Floating WhatsApp bubble + footer

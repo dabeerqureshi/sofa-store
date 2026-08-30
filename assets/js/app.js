@@ -134,7 +134,7 @@
 
   function waMessage(sofa) {
     return "Hi Montreal Sofa Co.! I'm interested in the " + sofa.name +
-      ". Is it still available? Could you share the price and delivery details?";
+      ". Is it available for Sunday delivery in Montreal? I'll pay cash on delivery - could you share the price?";
   }
 
   function cardHtml(sofa, opts) {
@@ -419,6 +419,7 @@
     var img = $('#modal-image');
     var thumbWrap = $('#modal-thumbs');
     modalSofa = sofa;
+    if (resetModalWow) resetModalWow();
     img.src = sofa.photos[0];
     img.alt = sofa.name;
     setModalPhoto(sofa, sofa.photos[0]);
@@ -491,6 +492,7 @@
   /* ---------- Store config ---------- */
   var CATALOG = [];
   var modalSofa = null;
+  var resetModalWow = null;
 
   function applyStoreConfig(store) {
     if (!store) return;
@@ -664,6 +666,12 @@
         (window.pageYOffset || 0);
       if (header) header.classList.toggle('scrolled', y > 10);
       if (toTop) toTop.classList.toggle('show', y > 640);
+      var bar = $('#scroll-progress');
+      if (bar) {
+        var sh = (document.documentElement && document.documentElement.scrollHeight) || 0;
+        var h = sh - (window.innerHeight || 0);
+        bar.style.width = (h > 0 ? Math.min(100, (y / h) * 100) : 0) + '%';
+      }
     }
     if (window.addEventListener) window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
@@ -673,6 +681,162 @@
       });
     }
     observeReveal(document);
+  }
+
+  /* ---------- Wow layer: 3D tilt, loupe, room view, magnetic ---------- */
+  function initWow() {
+    var fine = !!(window.matchMedia &&
+      window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+
+    if (fine && !REDUCED_MOTION) {
+      var tiltCard = null, tiltRaf = null, lastEv = null;
+      document.addEventListener('pointermove', function (ev) {
+        var card = ev.target && ev.target.closest ? ev.target.closest('.sofa-card') : null;
+        if (card !== tiltCard) {
+          if (tiltCard) tiltCard.style.transform = '';
+          tiltCard = card;
+        }
+        if (!tiltCard) return;
+        lastEv = ev;
+        if (tiltRaf) return;
+        tiltRaf = requestAnimationFrame(function () {
+          tiltRaf = null;
+          if (!tiltCard || !lastEv) return;
+          var r = tiltCard.getBoundingClientRect();
+          var px = (lastEv.clientX - r.left) / r.width - 0.5;
+          var py = (lastEv.clientY - r.top) / r.height - 0.5;
+          tiltCard.style.transform = 'perspective(900px) rotateX(' + (-py * 7).toFixed(2) +
+            'deg) rotateY(' + (px * 9).toFixed(2) + 'deg) translateY(-4px)';
+          tiltCard.style.setProperty('--gx', ((px + 0.5) * 100).toFixed(1) + '%');
+          tiltCard.style.setProperty('--gy', ((py + 0.5) * 100).toFixed(1) + '%');
+        });
+      });
+      document.addEventListener('pointerout', function (ev) {
+        if (!tiltCard) return;
+        var from = ev.target && ev.target.closest ? ev.target.closest('.sofa-card') : null;
+        var to = ev.relatedTarget && ev.relatedTarget.closest ? ev.relatedTarget.closest('.sofa-card') : null;
+        if (from === tiltCard && to !== tiltCard) {
+          tiltCard.style.transform = '';
+          tiltCard = null;
+        }
+      });
+
+      var wa = $('.wa-float');
+      if (wa) {
+        document.addEventListener('pointermove', function (ev) {
+          var r = wa.getBoundingClientRect();
+          var dx = ev.clientX - (r.left + r.width / 2);
+          var dy = ev.clientY - (r.top + r.height / 2);
+          if (dx * dx + dy * dy < 19600) {
+            wa.style.transform = 'translate(' + (dx * 0.18).toFixed(1) + 'px,' + (dy * 0.18).toFixed(1) + 'px)';
+          } else if (wa.style.transform) {
+            wa.style.transform = '';
+          }
+        });
+      }
+    }
+
+    bindModalWow(fine);
+  }
+
+  function bindModalWow(fine) {
+    var fig = $('.modal-figure');
+    var img = $('#modal-image');
+    var panel = $('.modal-panel');
+    var roomBtn = $('#modal-room');
+    if (!fig || !img) return;
+    var lens = null, roomOn = false, roomRy = 0;
+
+    function setRy(deg) {
+      fig.style.setProperty('--ry', deg.toFixed(1) + 'deg');
+      img.style.transform = 'rotateY(' + deg.toFixed(1) + 'deg) scale(1.03)';
+    }
+    function setRoom(on) {
+      roomOn = on;
+      if (panel) panel.classList.toggle('room-mode', on);
+      if (roomBtn) {
+        roomBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        roomBtn.classList.toggle('active', on);
+      }
+      if (!on) {
+        roomRy = 0;
+        fig.style.removeProperty('--ry');
+        img.style.transform = '';
+        img.classList.remove('zoomed');
+      }
+    }
+    if (roomBtn) {
+      roomBtn.addEventListener('click', function () { setRoom(!roomOn); });
+    }
+    resetModalWow = function () {
+      setRoom(false);
+      if (lens) lens.classList.remove('on');
+    };
+
+    var dragging = false, startX = 0, baseRy = 0;
+    fig.addEventListener('pointerdown', function (ev) {
+      if (!roomOn) return;
+      dragging = true;
+      startX = ev.clientX;
+      baseRy = roomRy;
+      fig.classList.add('dragging');
+      if (fig.setPointerCapture) {
+        try { fig.setPointerCapture(ev.pointerId); } catch (e) {}
+      }
+    });
+    fig.addEventListener('pointermove', function (ev) {
+      if (!dragging) return;
+      roomRy = Math.max(-30, Math.min(30, baseRy + (ev.clientX - startX) * 0.18));
+      setRy(roomRy);
+    });
+    fig.addEventListener('pointerup', function () {
+      dragging = false;
+      fig.classList.remove('dragging');
+    });
+    fig.addEventListener('pointercancel', function () {
+      dragging = false;
+      fig.classList.remove('dragging');
+    });
+
+    img.addEventListener('dblclick', function (ev) {
+      if (roomOn) { setRy(0); return; }
+      var zoomed = img.classList.toggle('zoomed');
+      if (zoomed) {
+        var r = img.getBoundingClientRect();
+        img.style.transformOrigin =
+          ((ev.clientX - r.left) / r.width * 100).toFixed(1) + '% ' +
+          ((ev.clientY - r.top) / r.height * 100).toFixed(1) + '%';
+      } else {
+        img.style.transformOrigin = '';
+      }
+    });
+
+    if (!fine) return;
+    lens = document.createElement('div');
+    lens.className = 'loupe';
+    fig.appendChild(lens);
+    var Z = 2.4, LR = 80;
+    fig.addEventListener('pointermove', function (ev) {
+      if (roomOn) { lens.classList.remove('on'); return; }
+      var r = img.getBoundingClientRect();
+      var fr = fig.getBoundingClientRect();
+      var nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+      var s = Math.min(r.width / nw, r.height / nh);
+      var dw = nw * s, dh = nh * s;
+      var x = ev.clientX - r.left - (r.width - dw) / 2;
+      var y = ev.clientY - r.top - (r.height - dh) / 2;
+      if (x < 0 || y < 0 || x > dw || y > dh) { lens.classList.remove('on'); return; }
+      lens.classList.add('on');
+      lens.style.backgroundImage = 'url("' + img.src + '")';
+      lens.style.backgroundSize = (dw * Z).toFixed(0) + 'px ' + (dh * Z).toFixed(0) + 'px';
+      lens.style.backgroundPosition =
+        (-(x * Z - LR)).toFixed(0) + 'px ' + (-(y * Z - LR)).toFixed(0) + 'px';
+      lens.style.left = (ev.clientX - fr.left - LR) + 'px';
+      lens.style.top = (ev.clientY - fr.top - LR) + 'px';
+    });
+    fig.addEventListener('pointerleave', function () {
+      if (lens) lens.classList.remove('on');
+    });
   }
 
   /* ---------- Boot ---------- */
@@ -695,6 +859,7 @@
   function boot() {
     initChrome();
     initMotion();
+    initWow();
     loadData().then(function (results) {
       var store = results[0];
       var sofas = normalizeSofas(results[1]);

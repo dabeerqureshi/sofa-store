@@ -265,11 +265,11 @@ def build_description(seats, mtype, material, color):
 NEIGHBORHOODS = (
     "Mile-End", "Plateau", "Griffintown", "Rosemont", "Villeray",
     "Hochelaga", "Verdun", "NDG", "Outremont", "Westmount",
-    "Ahuntsic", "Saint-Henri", "Pointe-Saint-Charles", "Old Montreal",
+    "Ahuntsic", "Saint-Henri", "Pointe-Saint-Charles", "Ville-Marie",
     "Saint-Laurent", "Saint-Leonard", "Cartierville", "Snowdon",
-    "Côte-des-Neiges", "Parc-Extension", "Anjou", "Kirkland",
-    "Pierrefonds", "Nuns' Island", "Brossard", "Boucherville",
-    "Terrebonne", "Laval", "Lachine", "Lasalle",
+    "Côte-des-Neiges", "Parc-Extension", "Anjou", "Mercier",
+    "Pierrefonds", "Nuns' Island", "Montreal-North", "Riviere-des-Prairies",
+    "Lachine", "Lasalle", "Saint-Michel", "Hampstead",
 )
 
 # Designer-style collection labels used once the neighbourhood names run

@@ -1,23 +1,23 @@
 {
   "businessName": "Montreal Sofa Co.",
   "tagline": "Premium Sofas. Delivered to Your Door.",
-  "deliveryArea": "Montreal, Laval, Longueuil & surrounding areas",
+  "deliveryArea": "Montreal only — all boroughs",
   "deliveryAreasList": [
-    "Montreal",
-    "Laval",
-    "Longueuil",
-    "Brossard",
-    "Saint-Laurent",
-    "Verdun",
-    "NDG",
     "Plateau Mont-Royal",
+    "Mile End",
     "Rosemont",
+    "NDG",
+    "Verdun",
+    "Saint-Laurent",
     "Ahuntsic",
-    "South Shore",
-    "West Island"
+    "Hochelaga",
+    "Villeray",
+    "Côte-des-Neiges",
+    "Lachine",
+    "Lasalle"
   ],
-  "deliveryHours": "Flexible delivery windows - ask us on WhatsApp",
-  "whatsappDefaultMessage": "Hi Montreal Sofa Co.! I'm interested in one of your sofas. Could you tell me more?",
+  "deliveryHours": "Deliveries every Sunday — book your window on WhatsApp",
+  "whatsappDefaultMessage": "Hi Montreal Sofa Co.! I'm interested in one of your sofas. Do you deliver to my place in Montreal this Sunday? I'd pay cash on delivery.",
   "city": "Montreal",
   "province": "QC",
   "country": "Canada",
@@ -27,19 +27,15 @@
   "email": "hello@montrealsofaco.com",
   "hours": "7 days a week - 9 AM to 9 PM",
   "deliveryAreas": [
-    "Montreal",
-    "Laval",
-    "Longueuil",
-    "South Shore",
-    "North Shore"
+    "Montreal"
   ],
   "heroImage": "images/p01-1.jpg",
-  "deliveryNote": "Home delivery available across Montreal and surrounding areas. Delivery fees vary by distance - ask us on WhatsApp.",
+  "deliveryNote": "Sunday delivery across Montreal only — every borough. Inspect your sofa at your door and pay cash on delivery.",
   "valueProps": [
     {
       "icon": "truck",
-      "title": "Home Delivery",
-      "text": "We deliver your sofa right to your door, across Montreal and surrounding areas."
+      "title": "Sunday Delivery",
+      "text": "We deliver across Montreal every Sunday — book the window that suits you on WhatsApp."
     },
     {
       "icon": "shield",
@@ -48,13 +44,13 @@
     },
     {
       "icon": "eye",
-      "title": "Inspect Before You Pay",
-      "text": "Take your time. Check your sofa at delivery, and only pay when you're fully satisfied."
+      "title": "Cash on Delivery",
+      "text": "Inspect your sofa at your door and pay in cash only once you're fully satisfied."
     },
     {
       "icon": "chat",
       "title": "Easy WhatsApp Ordering",
-      "text": "Chat with us directly on WhatsApp - ask questions, request photos, and order in minutes."
+      "text": "Chat with us directly on WhatsApp - ask questions, request photos, and book your Sunday slot in minutes."
     }
   ],
   "howItWorks": [
@@ -70,13 +66,13 @@
     },
     {
       "step": "03",
-      "title": "Schedule Delivery",
-      "text": "Agree on a delivery time that suits you. We handle the heavy lifting right to your door."
+      "title": "Book a Sunday Slot",
+      "text": "We deliver across Montreal every Sunday. Reserve the delivery window that works for you."
     },
     {
       "step": "04",
-      "title": "Inspect & Pay",
-      "text": "Inspect your sofa upon arrival. If you're happy, complete payment - simple and stress-free."
+      "title": "Inspect & Pay Cash",
+      "text": "Check your sofa at your door. Pay cash on delivery only when you're fully satisfied."
     }
   ]
 }
