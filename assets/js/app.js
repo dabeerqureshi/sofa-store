@@ -154,7 +154,7 @@
       : '<a class="btn btn-wa btn-block" data-wa-link href="#" aria-disabled="true" aria-label="Order ' + esc(sofa.name) + ' on WhatsApp">' +
         '<svg width="17" height="17"><use href="#i-wa"/></svg>Order on WhatsApp</a>';
     return (
-      '<article class="sofa-card fade-in" data-id="' + esc(sofa.id) + '">' +
+      '<article class="sofa-card" data-id="' + esc(sofa.id) + '">' +
         '<div class="sofa-media">' + photoCount +
           '<button type="button" class="sofa-media-btn" data-sofa="' + esc(sofa.id) + '" ' +
             'aria-label="View details for ' + esc(sofa.name) + '">' +
@@ -221,6 +221,7 @@
   function renderGrid(root, all) {
     var list = applyFilters(all);
     root.innerHTML = list.map(function (s) { return cardHtml(s); }).join('');
+    observeReveal(root);
     var meta = $('#results-count');
     if (meta) {
       meta.innerHTML = list.length === all.length
@@ -508,6 +509,69 @@
     }
   }
 
+  /* ---------- Motion: reveals, counters, scroll chrome ---------- */
+  var REDUCED_MOTION = !!(window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  function observeReveal(root) {
+    var nodes = $all('.reveal', root || document);
+    if (!nodes.length) return;
+    if (REDUCED_MOTION || !('IntersectionObserver' in window)) {
+      nodes.forEach(function (n) { n.classList.add('in-view'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -5% 0px' });
+    nodes.forEach(function (n) {
+      if (!n.classList.contains('in-view')) io.observe(n);
+    });
+  }
+
+  function animateStockCounters(total) {
+    if (!total) return;
+    $all('[data-stock-count]').forEach(function (el) {
+      if (REDUCED_MOTION || typeof requestAnimationFrame !== 'function') {
+        el.textContent = String(total);
+        return;
+      }
+      var t0 = null;
+      var dur = 1100;
+      function tick(ts) {
+        if (t0 === null) t0 = ts;
+        var p = Math.min((ts - t0) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = String(Math.round(eased * total));
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  function initMotion() {
+    var header = $('.site-header');
+    var toTop = $('#to-top');
+    function onScroll() {
+      var y = (document.documentElement && document.documentElement.scrollTop) ||
+        (window.pageYOffset || 0);
+      if (header) header.classList.toggle('scrolled', y > 10);
+      if (toTop) toTop.classList.toggle('show', y > 640);
+    }
+    if (window.addEventListener) window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    if (toTop) {
+      toTop.addEventListener('click', function () {
+        if (window.scrollTo) window.scrollTo({ top: 0, behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+      });
+    }
+    observeReveal(document);
+  }
+
   /* ---------- Boot ---------- */
   function loadData() {
     return Promise.all([
@@ -527,6 +591,7 @@
 
   function boot() {
     initChrome();
+    initMotion();
     loadData().then(function (results) {
       var store = results[0];
       var sofas = normalizeSofas(results[1]);
@@ -535,6 +600,7 @@
       initCatalogPage(sofas);
       initIndexPage(sofas);
       updateStockCount(sofas);
+      animateStockCounters(sofas.length);
     }).catch(function (err) {
       console.error('Montreal Sofa Co.: failed to load site data', err);
       var grid = $('#catalog-grid') || $('#featured-grid');

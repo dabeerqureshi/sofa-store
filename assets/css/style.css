@@ -544,6 +544,142 @@ body.modal-open { overflow: hidden; }
   .brand-name { font-size: 1.08rem; }
 }
 
+/* ==========================================================================
+   Motion: scroll reveals, staggered grids, hero entrance
+   ========================================================================== */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.js .reveal.in-view { opacity: 1; transform: none; }
+
+.js .reveal[data-stagger] > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.js .reveal.in-view[data-stagger] > * { opacity: 1; transform: none; }
+.js .reveal.in-view[data-stagger] > *:nth-child(2) { transition-delay: 0.07s; }
+.js .reveal.in-view[data-stagger] > *:nth-child(3) { transition-delay: 0.14s; }
+.js .reveal.in-view[data-stagger] > *:nth-child(4) { transition-delay: 0.21s; }
+.js .reveal.in-view[data-stagger] > *:nth-child(5) { transition-delay: 0.28s; }
+.js .reveal.in-view[data-stagger] > *:nth-child(6) { transition-delay: 0.35s; }
+.js .reveal.in-view[data-stagger] > *:nth-child(7) { transition-delay: 0.42s; }
+.js .reveal.in-view[data-stagger] > *:nth-child(8) { transition-delay: 0.49s; }
+.js .reveal.in-view[data-stagger] > *:nth-child(n+9) { transition-delay: 0.55s; }
+
+.js .hero-copy > * { opacity: 0; animation: heroIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.js .hero-copy > *:nth-child(1) { animation-delay: 0.08s; }
+.js .hero-copy > *:nth-child(2) { animation-delay: 0.18s; }
+.js .hero-copy > *:nth-child(3) { animation-delay: 0.28s; }
+.js .hero-copy > *:nth-child(4) { animation-delay: 0.38s; }
+.js .hero-copy > *:nth-child(5) { animation-delay: 0.48s; }
+.js .hero-media { opacity: 0; animation: heroIn 1.1s 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.js .hero-badge { opacity: 0; animation: heroIn 0.8s 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal,
+  .js .reveal[data-stagger] > *,
+  .js .hero-copy > *,
+  .js .hero-media,
+  .js .hero-badge {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- Delivery areas ticker ---------- */
+.ticker { overflow: hidden; background: var(--bg-white); border-block: 1px solid var(--line); padding: 0.85rem 0; }
+.ticker-track { display: flex; width: max-content; animation: tickerScroll 38s linear infinite; }
+.ticker-track span {
+  display: inline-flex; align-items: center;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted); white-space: nowrap;
+}
+.ticker-track span::after { content: "\2022"; color: var(--accent-2); margin: 0 1.3rem; }
+@keyframes tickerScroll { to { transform: translateX(-50%); } }
+
+/* ---------- Chrome micro-interactions ---------- */
+.site-header.scrolled { box-shadow: 0 8px 30px rgba(22, 36, 58, 0.1); }
+.btn svg { transition: transform 0.2s ease; }
+.btn:hover svg { transform: translateX(2px); }
+
+.wa-float::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--wa-2); z-index: -1; opacity: 0.5;
+  animation: waPulse 2.6s ease-out infinite;
+}
+@keyframes waPulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  70%, 100% { transform: scale(1.6); opacity: 0; }
+}
+
+.to-top {
+  position: fixed; right: 18px; bottom: 90px; z-index: 80;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--navy); color: #fff; border: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-2);
+  opacity: 0; pointer-events: none; transform: translateY(12px);
+  transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease;
+}
+.to-top.show { opacity: 1; pointer-events: auto; transform: none; }
+.to-top:hover { background: var(--navy-3); }
+.to-top svg { transform: rotate(-90deg); }
+
+/* ---------- Image load shimmer ---------- */
+.sofa-media::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 32%, rgba(255, 255, 255, 0.6) 50%, transparent 68%);
+  transform: translateX(-110%);
+  animation: mediaShimmer 1.5s ease 2;
+}
+@keyframes mediaShimmer { to { transform: translateX(110%); } }
+
+/* ---------- Modal entrance ---------- */
+.modal .modal-backdrop { animation: backdropIn 0.3s ease both; }
+.modal .modal-panel { animation: panelIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(28px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- FAQ ---------- */
+.faq-list { display: grid; gap: 0.9rem; max-width: 800px; }
+.faq-item {
+  background: var(--bg-white); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); overflow: hidden;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.faq-item[open] { border-color: var(--accent-2); box-shadow: var(--shadow-1); }
+.faq-item summary {
+  cursor: pointer; list-style: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1.05rem 1.3rem; font-weight: 600; color: var(--navy); font-size: 1rem;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary:hover { color: var(--navy-3); }
+.faq-item summary::after {
+  content: "+"; flex: none; font-size: 1.35rem; line-height: 1;
+  color: var(--accent); transition: transform 0.25s ease;
+}
+.faq-item[open] summary::after { transform: rotate(45deg); }
+.faq-item p { padding: 0 1.3rem 1.2rem; color: var(--muted); font-size: 0.95rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track, .wa-float::before, .sofa-media::after { animation: none !important; }
+  .to-top, .faq-item summary::after { transition: none !important; }
+}
+
 
 
 
