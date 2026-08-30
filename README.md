@@ -6,21 +6,19 @@ Built with plain HTML, CSS and JavaScript — no backend, no build step, no depe
 
 ## 🔴 Step 1 — Set your WhatsApp number (important)
 
-Open **`data/store.json`** and fill in your real details:
+Open **`data/store.json`** and set your real number:
 
 ```json
 {
-  "whatsappNumber": "15140000000",
-  "whatsappDisplay": "+1 (514) 000-0000",
-  "whatsappConfigured": false
+  "whatsappNumber": "15145551234",
+  "whatsappConfigured": true
 }
 ```
 
 - `whatsappNumber` — your WhatsApp number **without** `+` or spaces, country code first (e.g. `15145551234`)
-- `whatsappDisplay` — how it looks on the site (e.g. `+1 (514) 555-1234`)
-- `whatsappConfigured` — set to `true` once your number is real
+- `whatsappConfigured` — `true` means every WhatsApp button on the site is live
 
-Until `whatsappConfigured` is `true`, every WhatsApp button shows a "not configured yet" notice instead of opening the chat.
+The site never displays a phone number — visitors just tap **WhatsApp** buttons that open a chat with a pre-filled message. The number currently in `store.json` is a **placeholder**: replace it with your real one before sharing the site with customers.
 
 You can also adjust the tagline, service area, delivery areas, hours and delivery note in the same file.
 
@@ -30,9 +28,10 @@ Your site is a single page with sections:
 
 - **Home / Hero** — brand, tagline, trust badges
 - **Why Us** — delivery, quality, inspect-before-pay, WhatsApp ordering
-- **Catalog** — search + filters (seats, type, material, color) + sort
-  - every sofa has a **💬 WhatsApp button** that sends a pre-filled message naming that exact sofa
-  - click **Details** on any card for a larger photo and full specs
+- **Catalog** — all sofas in stock, with search + filters (seats, type, material, color) + sort
+  - pricing is **contact-only**: every card shows a **Contact for Pricing** badge — no prices are published anywhere on the site
+  - every sofa has a **💬 WhatsApp button** that sends a pre-filled message naming that exact sofa and asking for the price
+  - click any photo for full details: the full-size (uncropped) image, thumbnails, a **⬇ Download Image** button and a **View Full Image** link
 - **How It Works** — the 4-step buying process
 - **About** — brand story
 - **Contact** — WhatsApp CTA, service area, hours, delivery note
@@ -76,7 +75,7 @@ The catalog lives in **`data/sofas.json`** (generated). Each entry:
   "type": "Sofa Bed",
   "material": "Corduroy",
   "color": "Light Grey",
-  "price": 899,
+  "price": null,
   "priceOnRequest": true,
   "image": "images/sofa-001.jpg",
   "source": "3 Seater Sofa Bed Courdary LG 5.6.jpg",
@@ -85,7 +84,7 @@ The catalog lives in **`data/sofas.json`** (generated). Each entry:
 ```
 
 - `available: false` hides a sofa without deleting it
-- `price: null` → the card shows **"Price on WhatsApp"** instead of a fake price
+- pricing is **contact-only**: the catalog always shows **"Contact for Pricing"**, and the generator never publishes prices
 
 ### Adding / updating sofas (from new photos)
 
@@ -110,7 +109,7 @@ git push origin main
 
 ### Quick edits without the generator
 
-You can edit `data/sofas.json` by hand. To hide a sofa, flip `available` to `false`. To add a price, set `price` to a number. Pictures must already be in `images/` and referenced by their path.
+You can edit `data/sofas.json` by hand. To hide a sofa, flip `available` to `false`. Pictures must already be in `images/` and referenced by their path. Pricing stays contact-only — the site shows **"Contact for Pricing"** on every sofa.
 
 ## 🗂 Project structure
 

@@ -33,6 +33,8 @@
   <symbol id="i-close" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 21s-7-5.8-7-11a7 7 0 0 1 14 0c0 5.2-7 11-7 11z"/><circle cx="12" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0 4.2-4.2M12 15l-4.2-4.2M4.5 17.5V19a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-1.5"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 3.5H3.5V9M15 3.5h5.5V9M9 20.5H3.5V15M15 20.5h5.5V15"/></symbol>
 </svg>
 
 <header class="site-header" id="top">
@@ -61,7 +63,7 @@
     <div class="container">
       <span class="eyebrow">In stock now</span>
       <h1>Sofa Catalogue</h1>
-      <p>Every sofa is quality-checked, delivered to your door, and payable after inspection. Tap any piece for details, or message us on WhatsApp.</p>
+      <p>All <span data-stock-count>50</span> sofas are in stock — each one quality-checked, delivered to your door, and payable after inspection. Contact us for pricing on any piece: tap a photo for details, or message us on WhatsApp.</p>
     </div>
   </section>
 
@@ -77,8 +79,6 @@
           <label for="catalog-sort">Sort</label>
           <select id="catalog-sort">
             <option value="featured">Featured</option>
-            <option value="price-asc">Price: low to high</option>
-            <option value="price-desc">Price: high to low</option>
             <option value="seats-desc">Most seats</option>
             <option value="name-asc">Name A–Z</option>
           </select>
@@ -109,6 +109,12 @@
     </button>
     <div class="modal-media">
       <figure class="modal-figure"><img id="modal-image" src="" alt="" width="900" height="700"></figure>
+      <div class="modal-media-actions">
+        <a id="modal-download" class="btn btn-media" href="#" download>
+          <svg width="16" height="16"><use href="#i-download"/></svg>Download Image</a>
+        <a id="modal-full" class="btn btn-media" href="#" target="_blank" rel="noopener">
+          <svg width="16" height="16"><use href="#i-expand"/></svg>View Full Image</a>
+      </div>
       <div class="modal-thumbs" id="modal-thumbs" hidden></div>
     </div>
     <div class="modal-body">
@@ -125,7 +131,7 @@
       <div class="modal-actions">
         <a href="#" class="btn btn-wa btn-lg" id="modal-wa-btn" rel="noopener">
           <svg width="20" height="20"><use href="#i-wa"/></svg>Order on WhatsApp</a>
-        <p class="modal-note" id="modal-note">Pre-filled message — just hit send.</p>
+        <p class="modal-note" id="modal-note">Message us for pricing — your message arrives pre-filled, just hit send.</p>
       </div>
     </div>
   </div>
@@ -170,7 +176,8 @@
 <a href="#" class="wa-float" data-wa-link data-wa-type="general" aria-label="Chat on WhatsApp" rel="noopener">
   <svg width="26" height="26"><use href="#i-wa"/></svg>
 </a>
-<script>window.STORE=null;</script>
+<script src="data/store.js"></script>
+<script src="data/sofas.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

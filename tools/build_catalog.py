@@ -2,15 +2,14 @@
 # -*- coding: utf-8 -*-
 """Montreal Sofa Co. - catalog builder v2.
 
-Builds a curated catalog of 50 products (up to 3 photos each) from the raw
-photo archives in pictures/:
+Builds the complete catalog (every usable product, up to 3 photos each)
+from the raw photo archives in pictures/:
 
   1. extracts both zip archives in upload order,
   2. de-duplicates identical photos by content hash,
   3. drops tiny / low-res / info-graphic images,
-  4. clusters consecutive photos into products (WhatsApp exports keep the
-     shots of one sofa together, so adjacent photos = same product),
-  5. keeps the best 50 products (3-photo products first),
+  4. clusters photos into products by filename signature,
+  5. keeps EVERY product - nothing is dropped,
   6. optimizes photos into images/pNN-K.jpg and writes data/sofas.json.
 
 Requires macOS (uses `sips` for image inspection/optimization).
@@ -41,7 +40,6 @@ MAX_EDGE = 1200
 QUALITY = "68"
 MIN_EDGE = 360
 MIN_BYTES = 20000
-TARGET_PRODUCTS = 50
 MAX_PHOTOS = 3          # photos kept per product
 
 SKIP_NAME = (
@@ -212,25 +210,8 @@ def detect_color(fn):
     return None
 
 
-def detect_price(fn):
-    m = re.search(r"(\d+(?:\.\d+)?)\s*\$", fn)
-    if m:
-        try:
-            return int(round(float(m.group(1))))
-        except Exception:
-            return None
-    stem = os.path.splitext(fn)[0]
-    if re.search(r"\d{8,}", stem):
-        return None  # facebook ID / date stamp, not a price
-    m = re.search(r"[\s\-_](\d{3,4}(?:\.\d+)?)\s*$", stem)
-    if m:
-        try:
-            val = float(m.group(1))
-        except Exception:
-            return None
-        if val >= 500:
-            return int(round(val))
-    return None
+# Pricing is intentionally never extracted or published: the whole site is
+# "contact for pricing". Customers ask for the price on WhatsApp.
 
 
 def build_title(seats, model, mtype, material, color):
@@ -253,7 +234,7 @@ def build_title(seats, model, mtype, material, color):
     return title
 
 
-def build_description(seats, mtype, material, color, price):
+def build_description(seats, mtype, material, color):
     """Professional, honest 2-sentence product description."""
     kind = {
         "Sofa Bed": "A versatile sofa bed",
@@ -291,12 +272,22 @@ NEIGHBORHOODS = (
     "Terrebonne", "Laval", "Lachine", "Lasalle",
 )
 
+# Designer-style collection labels used once the neighbourhood names run
+# out; the series number stays small because it is counted per collection.
+COLLECTIONS = (
+    "Signature", "Metro", "Loft", "Atlas", "Nova", "Summit", "Crescent",
+    "Maple", "Aurora", "Onyx", "Haven", "Prime", "Select", "Urban",
+    "Classic", "Comfort", "Elite", "Vogue", "Sable", "Ivory",
+)
 
-def anonymous_name(seats, mtype, seen):
+
+def anonymous_name(seats, mtype, seen, series):
     """Collection-style names for photos with no filename information.
 
     Montreal neighbourhood names are honest (a collection label, not a
-    product claim) and feel local and professional to customers.
+    product claim) and feel local and professional to customers. Once they
+    run out, designer collection labels are rotated through, keeping the
+    series number per collection small ("Metro Sofa 3", not "Sofa 148").
     """
     base_type = mtype or "Sofa"
     for hood in NEIGHBORHOODS:
@@ -304,11 +295,22 @@ def anonymous_name(seats, mtype, seen):
         if name not in seen:
             seen[name] = 1
             return name
-    i = 1
+    counters = series.setdefault(base_type, {})
+    # Round-robin: always take the least-used collection so the series
+    # number stays small ("Signature Sofa 8", never "Signature Sofa 148").
+    coll = min(COLLECTIONS, key=lambda c: counters.get(c, 0))
+    n = counters.get(coll, 0) + 1
+    counters[coll] = n
+    name = "%s %s %d" % (coll, base_type, n)
+    if name not in seen:
+        seen[name] = 1
+        return name
+    i = n + 1
     while True:
-        name = "Signature %s %d" % (base_type, i)
+        name = "%s %s %d" % (coll, base_type, i)
         if name not in seen:
             seen[name] = 1
+            counters[coll] = i
             return name
         i += 1
 
@@ -429,15 +431,17 @@ def main():
         groups = cluster_products(items)
         log("Clustered into %d candidate products" % len(groups))
 
-        # Named products (filename-signature groups) carry real titles,
-        # prices and attributes - they come first. Anonymous single photos
+        # Named products (filename-signature groups) carry real titles and
+        # attributes - they come first. Anonymous single photos
         # fill the rest of the catalog, sharpest first.
         groups.sort(key=lambda g: (
             0 if g["named"] else 1,
             -len(g["photos"]),
             -max(min(r["w"], r["h"]) for r in g["photos"]),
         ))
-        selected = groups[:TARGET_PRODUCTS]
+        # Every clustered product ships - named groups first, then the
+        # anonymous single photos, sharpest first. Nothing is dropped.
+        selected = groups
         selected.sort(key=lambda g: (
             0 if g["named"] else 1,
             -len(g["photos"]),
@@ -447,6 +451,7 @@ def main():
 
         entries = []
         seen_titles = {}
+        series = {}
         for i, group in enumerate(selected, 1):
             photos = group["photos"]
             head = photos[0]
@@ -456,11 +461,8 @@ def main():
             material = detect_material(low)
             model = detect_model(low)
             color = detect_color(head["orig"])
-            price = detect_price(head["orig"])
             for extra in photos[1:]:
                 elow = extra["orig"].lower()
-                if not price:
-                    price = detect_price(extra["orig"])
                 if not material:
                     material = detect_material(elow)
                 if not seats:
@@ -470,7 +472,7 @@ def main():
             if not group["named"] or not (seats or model or material):
                 # no real product info from the filename - use a local
                 # collection name instead of a generic/numbered title
-                name = anonymous_name(seats, mtype, seen_titles)
+                name = anonymous_name(seats, mtype, seen_titles, series)
             elif name in seen_titles:
                 seen_titles[name] += 1
                 name = "%s (Model %d)" % (name, seen_titles[name])
@@ -501,13 +503,13 @@ def main():
             entries.append({
                 "id": "p%02d" % i,
                 "name": name,
-                "description": build_description(seats, mtype, material, color, price),
+                "description": build_description(seats, mtype, material, color),
                 "seats": seats,
                 "type": mtype,
                 "material": material,
                 "color": color,
-                "price": price,
-                "priceOnRequest": price is None,
+                "price": None,
+                "priceOnRequest": True,
                 "images": images,
                 "tags": tags,
                 "available": True,
@@ -518,6 +520,13 @@ def main():
         json.dump(catalog, fh, ensure_ascii=False, indent=2)
     log("Wrote %s with %d products" % (SOFAS_JSON, len(entries)))
 
+    # also emit classic-script versions so the site works when opened
+    # directly from disk (file://), where fetch() of JSON is blocked
+    with open(os.path.join(DATA_DIR, "sofas.js"), "w", encoding="utf-8") as fh:
+        fh.write("window.MSC_DATA = ")
+        json.dump(catalog, fh, ensure_ascii=False)
+        fh.write(";\n")
+
     # keep the homepage hero pointing at a real product photo
     if entries and os.path.exists(STORE_JSON):
         with open(STORE_JSON, "r", encoding="utf-8") as fh:
@@ -527,13 +536,16 @@ def main():
             json.dump(store, fh, ensure_ascii=False, indent=2)
         log("store.json heroImage -> %s" % store["heroImage"])
 
+        with open(os.path.join(DATA_DIR, "store.js"), "w", encoding="utf-8") as fh:
+            fh.write("window.MSC_STORE = ")
+            json.dump(store, fh, ensure_ascii=False)
+            fh.write(";\n")
+
     total_bytes = sum(
         os.path.getsize(os.path.join(IMAGES_DIR, os.path.basename(img)))
         for e in entries for img in e["images"]
     )
     log("Total optimized image size: %.1f MB" % (total_bytes / 1048576.0))
-    priced = [e for e in entries if not e["priceOnRequest"]]
-    log("With known prices: %d / %d" % (len(priced), len(entries)))
     shots = {}
     for e in entries:
         shots[len(e["images"])] = shots.get(len(e["images"]), 0) + 1
@@ -541,9 +553,7 @@ def main():
         "%d photo(s): %d products" % (k, shots[k]) for k in sorted(shots)))
     log("Products:")
     for e in entries:
-        log("  %-4s %-38s %s" % (
-            e["id"], e["name"],
-            ("$%d" % e["price"]) if e["price"] else "price on request"))
+        log("  %-4s %s" % (e["id"], e["name"]))
 
 
 if __name__ == "__main__":

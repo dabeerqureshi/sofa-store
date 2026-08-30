@@ -39,6 +39,11 @@
   }
 
   function fetchJson(url) {
+    if (typeof fetch !== 'function') {
+      // e.g. very old browser or non-http context; fall back to the
+      // embedded data scripts instead of throwing synchronously
+      return Promise.reject(new Error('fetch unavailable for ' + url));
+    }
     return fetch(url).then(function (r) {
       if (!r.ok) throw new Error(r.status + ' ' + url);
       return r.json();
@@ -72,7 +77,8 @@
       }
       return;
     }
-    window.open(link.getAttribute('data-wa-link'), '_blank', 'noopener');
+    var url = link.getAttribute('data-wa-link') || waLink(DEFAULT_WA_MESSAGE);
+    if (url) window.open(url, '_blank', 'noopener');
   });
 
   /* ---------- State ---------- */
@@ -85,15 +91,6 @@
   var SORTS = {
     'featured': function (a, b) {
       return (b.photos.length - a.photos.length) ||
-             ((b.price ? 1 : 0) - (a.price ? 1 : 0)) ||
-             String(a.id).localeCompare(String(b.id));
-    },
-    'price-asc': function (a, b) {
-      return (a.price != null ? a.price : Infinity) - (b.price != null ? b.price : Infinity) ||
-             String(a.id).localeCompare(String(b.id));
-    },
-    'price-desc': function (a, b) {
-      return (b.price != null ? b.price : -Infinity) - (a.price != null ? a.price : -Infinity) ||
              String(a.id).localeCompare(String(b.id));
     },
     'seats-desc': function (a, b) {
@@ -115,7 +112,6 @@
         return {
           id: s.id || 's' + (i + 1),
           name: s.name,
-          price: typeof s.price === 'number' ? s.price : null,
           seats: s.seats || null,
           type: s.type || null,
           material: s.material || null,
@@ -132,13 +128,13 @@
   }
 
   /* ---------- Templates ---------- */
-  function priceHtml(sofa) {
-    if (sofa.price != null) {
-      return '<span class="sofa-price">$' + sofa.price.toLocaleString('en-CA') +
-        ' <span class="price-note">CAD</span></span>';
-    }
-    return '<span class="sofa-price">$' +
-      '<span class="price-note">Message for price</span></span>';
+  function priceHtml() {
+    return '<span class="price-contact">Contact for Pricing</span>';
+  }
+
+  function waMessage(sofa) {
+    return "Hi Montreal Sofa Co.! I'm interested in the " + sofa.name +
+      ". Is it still available? Could you share the price and delivery details?";
   }
 
   function cardHtml(sofa, opts) {
@@ -150,8 +146,7 @@
     if (sofa.color) tags.push(esc(sofa.color));
     var photoCount = sofa.photos.length > 1
       ? '<span class="sofa-count">' + sofa.photos.length + ' photos</span>' : '';
-    var waMsg = "Hi Montreal Sofa Co.! I'm interested in the " + sofa.name +
-      " (" + priceText(sofa) + "). Is it still available?";
+    var waMsg = waMessage(sofa);
     var waHref = waLink(waMsg);
     var waBtn = waHref
       ? '<a class="btn btn-wa btn-block" data-wa-link href="' + esc(waHref) + '" rel="noopener" aria-label="Order ' + esc(sofa.name) + ' on WhatsApp">' +
@@ -165,6 +160,10 @@
             'aria-label="View details for ' + esc(sofa.name) + '">' +
             '<img src="' + esc(sofa.photos[0]) + '" alt="' + esc(sofa.name) + '" loading="lazy" width="600" height="450">' +
           '</button>' +
+          '<a class="img-dl" href="' + esc(sofa.photos[0]) + '" download="' + esc(downloadName(sofa, sofa.photos[0], 0)) + '"' +
+            ' aria-label="Download photo of ' + esc(sofa.name) + '" title="Download photo">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+          '</a>' +
         '</div>' +
         '<div class="sofa-body">' +
           '<h3>' + esc(sofa.name) + '</h3>' +
@@ -174,10 +173,6 @@
         '</div>' +
       '</article>'
     );
-  }
-
-  function priceText(sofa) {
-    return sofa.price != null ? '$' + sofa.price.toLocaleString('en-CA') + ' CAD' : 'price on request';
   }
 
   /* Image-area button should look clickable */
@@ -303,6 +298,26 @@
     });
   }
   /* ---------- Product modal ---------- */
+  function downloadName(sofa, photo, index) {
+    var base = String(sofa.name || 'sofa').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'sofa';
+    var ext = String(photo).split('.').pop().toLowerCase();
+    if (!/^[a-z0-9]{2,5}$/.test(ext)) ext = 'jpg';
+    return base + '-' + (index + 1) + '.' + ext;
+  }
+
+  function setModalPhoto(sofa, photo) {
+    var idx = sofa.photos.indexOf(photo);
+    if (idx === -1) idx = 0;
+    var dl = $('#modal-download');
+    var full = $('#modal-full');
+    if (dl) {
+      dl.setAttribute('href', photo);
+      dl.setAttribute('download', downloadName(sofa, photo, idx));
+    }
+    if (full) full.setAttribute('href', photo);
+  }
+
   function openModal(id) {
     var sofa = CATALOG.filter(function (s) { return s.id === id; })[0];
     if (!sofa) return;
@@ -310,8 +325,10 @@
     if (!modal) return;
     var img = $('#modal-image');
     var thumbWrap = $('#modal-thumbs');
+    modalSofa = sofa;
     img.src = sofa.photos[0];
     img.alt = sofa.name;
+    setModalPhoto(sofa, sofa.photos[0]);
     if (sofa.photos.length > 1) {
       thumbWrap.hidden = false;
       thumbWrap.innerHTML = sofa.photos.map(function (p, i) {
@@ -324,9 +341,8 @@
       thumbWrap.innerHTML = '';
     }
     $('#modal-title').textContent = sofa.name;
-    $('#modal-price').innerHTML = sofa.price != null
-      ? '$' + sofa.price.toLocaleString('en-CA') + ' <span class="price-note">CAD</span>'
-      : '<span class="price-note">Message us for this price</span>';
+    $('#modal-price').innerHTML =
+      '<span class="price-contact price-contact-lg">Contact for Pricing</span>';
     var meta = [];
     if (sofa.seats) meta.push(esc(sofa.seats) + '-Seater');
     if (sofa.type) meta.push(esc(sofa.type));
@@ -337,8 +353,7 @@
       : '';
     $('#modal-desc').textContent = sofa.desc ||
       'Premium sofa from our Montreal collection. Quality-checked, delivered to your door, and payable after inspection.';
-    var msg = "Hi Montreal Sofa Co.! I'm interested in the " + sofa.name +
-      " (" + priceText(sofa) + "). Is it still available?";
+    var msg = waMessage(sofa);
     var waBtn = $('#modal-wa-btn');
     if (WA_READY) {
       waBtn.setAttribute('href', waLink(msg));
@@ -368,7 +383,9 @@
       if (ev.target.closest('[data-modal-close]')) { closeModal(); return; }
       var thumb = ev.target.closest('.modal-thumb');
       if (thumb) {
-        $('#modal-image').src = thumb.getAttribute('data-photo');
+        var photo = thumb.getAttribute('data-photo');
+        $('#modal-image').src = photo;
+        if (modalSofa) setModalPhoto(modalSofa, photo);
         $all('.modal-thumb', modal).forEach(function (t) { t.classList.remove('active'); });
         thumb.classList.add('active');
       }
@@ -380,6 +397,7 @@
 
   /* ---------- Store config ---------- */
   var CATALOG = [];
+  var modalSofa = null;
 
   function applyStoreConfig(store) {
     if (!store) return;
@@ -411,10 +429,11 @@
       var cHours = $('#contact-hours');
       if (cHours) cHours.textContent = hours;
     }
-    var waDisplay = store.whatsappDisplay;
-    if (waDisplay && WA_READY) {
-      var cWa = $('#contact-wa-number');
-      if (cWa) cWa.textContent = waDisplay;
+    var replyHours = store.hours;
+    if (replyHours) {
+      var cReply = $('#contact-wa-reply');
+      if (cReply) cReply.textContent =
+        'We reply quickly · ' + String(replyHours).replace(/\s+-\s+/, ' · ');
     }
     var yearEl = $('#copyright-year');
     if (yearEl) yearEl.textContent = String(new Date().getFullYear());
@@ -460,8 +479,14 @@
   function initIndexPage(sofas) {
     var featuredGrid = $('#featured-grid');
     if (!featuredGrid) return;
-    var featured = sofas.slice(0, 8);
+    var featured = sofas.slice(0, 12);
     featuredGrid.innerHTML = featured.map(function (s) { return cardHtml(s); }).join('');
+  }
+
+  function updateStockCount(sofas) {
+    $all('[data-stock-count]').forEach(function (el) {
+      el.textContent = String(sofas.length);
+    });
   }
 
   /* ---------- Shared chrome (mobile menu) ---------- */
@@ -484,18 +509,32 @@
   }
 
   /* ---------- Boot ---------- */
-  function boot() {
-    initChrome();
-    Promise.all([
+  function loadData() {
+    return Promise.all([
       fetchJson('data/store.json'),
       fetchJson('data/sofas.json')
-    ]).then(function (results) {
+    ]).catch(function (fetchErr) {
+      // Fallback for file:// viewing (double-clicking index.html), where
+      // browsers block fetch() of local JSON. data/store.js and
+      // data/sofas.js carry the same data as classic scripts, which
+      // file:// allows.
+      if (window.MSC_STORE && window.MSC_DATA) {
+        return [window.MSC_STORE, window.MSC_DATA];
+      }
+      throw fetchErr;
+    });
+  }
+
+  function boot() {
+    initChrome();
+    loadData().then(function (results) {
       var store = results[0];
       var sofas = normalizeSofas(results[1]);
       CATALOG = sofas;
       applyStoreConfig(store);
       initCatalogPage(sofas);
       initIndexPage(sofas);
+      updateStockCount(sofas);
     }).catch(function (err) {
       console.error('Montreal Sofa Co.: failed to load site data', err);
       var grid = $('#catalog-grid') || $('#featured-grid');
@@ -519,6 +558,8 @@
     STATE: STATE,
     normalizeSofas: normalizeSofas,
     applyFilters: applyFilters,
-    getCatalog: function () { return CATALOG; }
+    getCatalog: function () { return CATALOG; },
+    cardHtml: cardHtml,
+    waMessage: waMessage
   };
 })();
