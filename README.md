@@ -109,7 +109,15 @@ python3 tools/build_catalog.py
 
 It de-duplicates identical photos, skips tiny/info images, optimizes everything into `images/sofa-NNN.jpg`, and regenerates `data/sofas.json`.
 
-3. Commit and push:
+3. Regenerate the lightweight grid thumbnails (fast catalog loading):
+
+```bash
+python3 tools/make_thumbs.py    # needs Pillow: pip install Pillow
+```
+
+This builds `thumbs/…` from `data/sofas.json` (~90% smaller), which the catalog grid uses so the page renders instantly. The detail modal and download links still use the full-resolution `images/…` files.
+
+4. Commit and push:
 
 ```bash
 git add -A
@@ -135,8 +143,10 @@ sofa-store/
 │   ├── store.json        # business info + WhatsApp number
 │   └── sofas.json        # generated catalog
 ├── images/               # generated, optimized sofa photos
+├── thumbs/               # generated, lightweight grid thumbnails
 ├── tools/
-│   └── build_catalog.py  # catalog generator (macOS)
+│   ├── build_catalog.py  # catalog generator (macOS)
+│   └── make_thumbs.py    # grid thumbnails (any OS, needs Pillow)
 ├── favicon.svg
 ├── robots.txt
 └── .nojekyll

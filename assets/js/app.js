@@ -141,6 +141,12 @@
   }
 
   /* ---------- Templates ---------- */
+  function thumbOf(photo) {
+    // Grid cards show a lightweight thumbnail; the modal and download links
+    // keep the full-resolution file.
+    return String(photo).replace(/^images\//, 'thumbs/');
+  }
+
   function priceHtml() {
     return '<span class="price-contact">Contact for Pricing</span>';
   }
@@ -171,7 +177,10 @@
         '<div class="sofa-media">' + photoCount +
           '<button type="button" class="sofa-media-btn" data-sofa="' + esc(sofa.id) + '" ' +
             'aria-label="View details for ' + esc(sofa.name) + '">' +
-            '<img src="' + esc(sofa.photos[0]) + '" alt="' + esc(sofa.name) + '" loading="lazy" width="600" height="450">' +
+            '<img src="' + esc(thumbOf(sofa.photos[0])) + '" alt="' + esc(sofa.name) + '" ' +
+            'loading="' + (opts.eager ? 'eager' : 'lazy') + '" decoding="async"' +
+            (opts.priority ? ' fetchpriority="high"' : '') +
+            ' width="600" height="450">' +
           '</button>' +
           '<a class="img-dl" href="' + esc(sofa.photos[0]) + '" download="' + esc(downloadName(sofa, sofa.photos[0], 0)) + '"' +
             ' aria-label="Download photo of ' + esc(sofa.name) + '" title="Download photo">' +
@@ -231,10 +240,69 @@
     }).length;
   }
 
-  function renderGrid(root, all) {
-    var list = applyFilters(all);
-    root.innerHTML = list.map(function (s) { return cardHtml(s); }).join('');
+  /* Progressive, parallel grid rendering.
+     The first viewport-worth of cards render immediately and eagerly (so the
+     page paints instantly instead of staying empty), then the remaining cards
+     are appended in small idle-time batches. This way ALL sofas appear and
+     their images load in parallel — with no scrolling or clicking needed —
+     while the DOM is built incrementally to keep the first paint fast. Each
+     card uses a tiny thumbnail, keeping the total payload (~5 MB) and memory
+     footprint low. */
+  var GRID_PAGE = 24;       // cards appended per build batch
+  var GRID_EAGER = 12;      // first N cards load eagerly (above the fold)
+  var GRID_PRIORITY = 6;    // first N cards get fetchpriority="high"
+  var gridState = { all: [], shown: 0, root: null, timer: null };
+
+  function appendGridChunk(root, start, end) {
+    var list = gridState.all;
+    var frag = document.createDocumentFragment();
+    for (var i = start; i < end; i++) {
+      var wrap = document.createElement('div');
+      wrap.innerHTML = cardHtml(list[i], {
+        eager: i < GRID_EAGER,
+        priority: i < GRID_PRIORITY
+      });
+      if (wrap.firstChild) frag.appendChild(wrap.firstChild);
+    }
+    root.appendChild(frag);
+    gridState.shown = end;
     observeReveal(root);
+  }
+
+  /* Schedule the rest of the grid in idle-time batches; yields between batches
+     so the browser can paint and fetch images in parallel. */
+  function scheduleGridFill(root) {
+    if (gridState.timer) { clearTimeout(gridState.timer); gridState.timer = null; }
+    function step() {
+      var start = gridState.shown;
+      if (start >= gridState.all.length) { gridState.timer = null; return; }
+      var end = Math.min(start + GRID_PAGE, gridState.all.length);
+      appendGridChunk(root, start, end);
+      if (end >= gridState.all.length) { gridState.timer = null; return; }
+      if (typeof requestIdleCallback === 'function') {
+        gridState.timer = requestIdleCallback(step, { timeout: 600 });
+      } else {
+        gridState.timer = setTimeout(step, 40);
+      }
+    }
+    if (typeof requestIdleCallback === 'function') {
+      gridState.timer = requestIdleCallback(step, { timeout: 600 });
+    } else {
+      gridState.timer = setTimeout(step, 40);
+    }
+  }
+
+  function renderGrid(root, all) {
+    if (gridState.timer) { clearTimeout(gridState.timer); gridState.timer = null; }
+    var list = applyFilters(all);
+    gridState.all = list;
+    gridState.shown = 0;
+    gridState.root = root;
+    root.innerHTML = '';
+    // Render the first page synchronously so the visible grid is instant.
+    if (list.length) appendGridChunk(root, 0, Math.min(GRID_PAGE, list.length));
+    // Fill the rest progressively and in parallel.
+    scheduleGridFill(root);
     var meta = $('#results-count');
     if (meta) {
       meta.innerHTML = list.length === all.length
