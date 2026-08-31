@@ -61,6 +61,16 @@ https://dabeerqureshi.github.io/sofa-store/
 
 Every future `git push` to `main` automatically updates the live site.
 
+> **Tip:** GitHub Pages briefly returns a *transient* 404 for a minute or two
+> while it rebuilds after each push. This is normal and self-corrects. The
+> included `404.html` automatically redirects visitors back to the homepage
+> during those moments, so nobody gets stuck on an error page.
+
+> **Reliability note:** both pages render the catalogue instantly from embedded
+> `data/sofas.js`/`data/store.js` (no waiting on a network request), then
+> refresh from `data/sofas.json` in the background. So the catalogue always
+> shows — even on a slow connection, under `file://`, or mid-deploy.
+
 ### Optional: your own `.ca` domain
 
 Buy a domain (e.g. `maisonsofa.ca`), add it under **Settings → Pages → Custom domain**, and set a `CNAME` record in your DNS pointing to `dabeerqureshi.github.io`.

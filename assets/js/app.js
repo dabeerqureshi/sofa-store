@@ -38,16 +38,29 @@
     toastTimer = setTimeout(function () { el.classList.remove('show'); }, 3200);
   }
 
-  function fetchJson(url) {
+  /* Like fetchJson but aborts the request after `ms` so a slow/hung network
+     request can never leave the catalog stuck on "Loading…". */
+  function fetchJsonWithTimeout(url, ms) {
     if (typeof fetch !== 'function') {
-      // e.g. very old browser or non-http context; fall back to the
-      // embedded data scripts instead of throwing synchronously
       return Promise.reject(new Error('fetch unavailable for ' + url));
     }
-    return fetch(url).then(function (r) {
-      if (!r.ok) throw new Error(r.status + ' ' + url);
-      return r.json();
-    });
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = null;
+    if (ctrl && ms > 0) {
+      timer = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms);
+    }
+    return fetch(url, ctrl ? { signal: ctrl.signal } : undefined)
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status + ' ' + url);
+        return r.json();
+      })
+      .then(function (data) {
+        if (timer) clearTimeout(timer);
+        return data;
+      }, function (err) {
+        if (timer) clearTimeout(timer);
+        throw err;
+      });
   }
 
   /* ---------- WhatsApp ---------- */
@@ -841,14 +854,23 @@
 
   /* ---------- Boot ---------- */
   function loadData() {
+    // data/store.js and data/sofas.js are loaded before app.js on both pages,
+    // so window.MSC_STORE / window.MSC_DATA are the reliable, deterministic
+    // source — they render instantly and work over file://, localhost,
+    // sub-paths and custom domains. We then refresh from the JSON files in the
+    // background as a progressive enhancement; rendering never waits on a
+    // network request, so a slow/hung/blocked request can no longer blank the
+    // catalog page.
+    if (window.MSC_STORE && window.MSC_DATA) {
+      refreshDataFromJson();
+      return Promise.resolve([window.MSC_STORE, window.MSC_DATA]);
+    }
+    // Only reached if the embedded data scripts are missing. Guard every
+    // request with a hard timeout so the catalog can never hang.
     return Promise.all([
-      fetchJson('data/store.json'),
-      fetchJson('data/sofas.json')
+      fetchJsonWithTimeout('data/store.json', 6000),
+      fetchJsonWithTimeout('data/sofas.json', 6000)
     ]).catch(function (fetchErr) {
-      // Fallback for file:// viewing (double-clicking index.html), where
-      // browsers block fetch() of local JSON. data/store.js and
-      // data/sofas.js carry the same data as classic scripts, which
-      // file:// allows.
       if (window.MSC_STORE && window.MSC_DATA) {
         return [window.MSC_STORE, window.MSC_DATA];
       }
@@ -856,13 +878,53 @@
     });
   }
 
+  /* Background refresh from the JSON files (never blocking, never fatal). */
+  function refreshDataFromJson() {
+    if (typeof fetch !== 'function') return;
+    Promise.all([
+      fetchJsonWithTimeout('data/store.json', 6000),
+      fetchJsonWithTimeout('data/sofas.json', 6000)
+    ]).then(function (results) {
+      var sofas = normalizeSofas(results[1]);
+      if (!sofas.length) return; // keep the already-rendered embedded data
+      CATALOG = sofas;
+      applyStoreConfig(results[0]);
+      var grid = $('#catalog-grid');
+      if (grid) renderGrid(grid, CATALOG);
+      var featured = $('#featured-grid');
+      if (featured) {
+        featured.innerHTML = CATALOG.slice(0, 12)
+          .map(function (s) { return cardHtml(s); }).join('');
+      }
+      updateStockCount(CATALOG);
+    }).catch(function (err) {
+      // Non-fatal: embedded data already rendered the page.
+      if (window.console && console.debug) {
+        console.debug('Montreal Sofa Co.: JSON refresh skipped', err);
+      }
+    });
+  }
+
+  /* Run a boot step and isolate any error so it can never stop the rest of
+     the page (including the catalog) from rendering. */
+  function safeInit(fn) {
+    try { fn(); } catch (err) {
+      if (window.console && console.error) {
+        console.error('Montreal Sofa Co.: init step failed', err);
+      }
+    }
+  }
+
   function boot() {
-    initChrome();
-    initMotion();
-    initWow();
+    // Each chrome/motion step is isolated so a failure in one subsystem can
+    // never prevent the catalog from rendering.
+    safeInit(initChrome);
+    safeInit(initMotion);
+    safeInit(initWow);
     loadData().then(function (results) {
       var store = results[0];
       var sofas = normalizeSofas(results[1]);
+      if (!sofas.length) throw new Error('catalog data contains no sofas');
       CATALOG = sofas;
       applyStoreConfig(store);
       initCatalogPage(sofas);
