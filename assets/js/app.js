@@ -90,7 +90,18 @@
       }
       return;
     }
-    var url = link.getAttribute('data-wa-link') || waLink(DEFAULT_WA_MESSAGE);
+    // Resolution order:
+    //   1. data-wa-link VALUE (modal button, catalog card buttons — set
+    //      explicitly in cardHtml so every card opens ITS sofa's message)
+    //   2. href, when it is a real link (covers the valueless attribute form)
+    //   3. the default general message (floating bubble, footer, contact…)
+    // Previously the valueless `data-wa-link` attribute on card buttons read
+    // back as '' and every card silently fell through to the generic message.
+    var url = link.getAttribute('data-wa-link');
+    if (!url) {
+      var href = link.getAttribute('href') || '';
+      url = (href && href !== '#') ? href : waLink(DEFAULT_WA_MESSAGE);
+    }
     if (url) window.open(url, '_blank', 'noopener');
   });
 
@@ -137,7 +148,16 @@
 
   function paramValue(name) {
     var m = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'));
-    return m ? decodeURIComponent(m[1]) : null;
+    if (!m) return null;
+    // In a query string, '+' encodes a space (e.g. ?type=Sofa+Bed from the
+    // footer/category links). decodeURIComponent() leaves '+' untouched,
+    // which made every spaced deep link resolve to an empty catalog. Decode
+    // manually, and never throw on stray '%' input.
+    try {
+      return decodeURIComponent(m[1].replace(/\+/g, '%20'));
+    } catch (e) {
+      return m[1];
+    }
   }
 
   /* ---------- Templates ---------- */
@@ -167,8 +187,12 @@
       ? '<span class="sofa-count">' + sofa.photos.length + ' photos</span>' : '';
     var waMsg = waMessage(sofa);
     var waHref = waLink(waMsg);
+    // The per-sofa link is stored in BOTH data-wa-link and href so the
+    // delegated WhatsApp click handler always opens THIS sofa's pre-filled
+    // message (a valueless data-wa-link reads back as '' and used to fall
+    // through to the generic message).
     var waBtn = waHref
-      ? '<a class="btn btn-wa btn-block" data-wa-link href="' + esc(waHref) + '" rel="noopener" aria-label="Order ' + esc(sofa.name) + ' on WhatsApp">' +
+      ? '<a class="btn btn-wa btn-block" data-wa-link="' + esc(waHref) + '" href="' + esc(waHref) + '" rel="noopener" aria-label="Order ' + esc(sofa.name) + ' on WhatsApp">' +
         '<svg width="17" height="17"><use href="#i-wa"/></svg>Order on WhatsApp</a>'
       : '<a class="btn btn-wa btn-block" data-wa-link href="#" aria-disabled="true" aria-label="Order ' + esc(sofa.name) + ' on WhatsApp">' +
         '<svg width="17" height="17"><use href="#i-wa"/></svg>Order on WhatsApp</a>';
@@ -200,8 +224,8 @@
   /* Image-area button should look clickable */
   document.addEventListener('click', function (ev) {
     if (ev.target.closest && ev.target.closest('.sofa-media-btn')) {
-      var id = ev.target.closest('.sofa-media-btn').getAttribute('data-sofa');
-      openModal(id);
+      var btn = ev.target.closest('.sofa-media-btn');
+      openModal(btn.getAttribute('data-sofa'), btn);
     }
   });
 
@@ -251,7 +275,45 @@
   var GRID_PAGE = 24;       // cards appended per build batch
   var GRID_EAGER = 12;      // first N cards load eagerly (above the fold)
   var GRID_PRIORITY = 6;    // first N cards get fetchpriority="high"
-  var gridState = { all: [], shown: 0, root: null, timer: null };
+  var gridState = { all: [], shown: 0, root: null, timer: null, idle: false };
+
+  /* Cancel the pending grid-fill step with the matching API:
+     requestIdleCallback handles are NOT setTimeout ids — clearTimeout cannot
+     reach them, which previously let stale steps survive a re-render. */
+  function cancelGridFill() {
+    if (gridState.timer == null) return;
+    if (gridState.idle && typeof cancelIdleCallback === 'function') {
+      cancelIdleCallback(gridState.timer);
+    } else {
+      clearTimeout(gridState.timer);
+    }
+    gridState.timer = null;
+    gridState.idle = false;
+  }
+
+  function scheduleNextFill(step) {
+    if (typeof requestIdleCallback === 'function') {
+      gridState.idle = true;
+      gridState.timer = requestIdleCallback(step, { timeout: 600 });
+    } else {
+      gridState.idle = false;
+      gridState.timer = setTimeout(step, 40);
+    }
+  }
+
+  /* Reveal a reveal-node immediately when it is already inside the (slightly
+     expanded) viewport. This is the deterministic fallback that fixes the
+     catalog: the 250-sofa grid is tens of thousands of pixels tall, so a
+     percentage IntersectionObserver threshold can never be met, and cards
+     used to stay at opacity:0 (invisible) on phones and after scroll-
+     restored reloads. */
+  function maybeReveal(el) {
+    if (!el || el.classList.contains('in-view')) return;
+    if (REDUCED_MOTION || !('IntersectionObserver' in window) ||
+        isRevealCandidate(el)) {
+      el.classList.add('in-view');
+    }
+  }
 
   function appendGridChunk(root, start, end) {
     var list = gridState.all;
@@ -267,33 +329,26 @@
     root.appendChild(frag);
     gridState.shown = end;
     observeReveal(root);
+    maybeReveal(root);
   }
 
   /* Schedule the rest of the grid in idle-time batches; yields between batches
      so the browser can paint and fetch images in parallel. */
   function scheduleGridFill(root) {
-    if (gridState.timer) { clearTimeout(gridState.timer); gridState.timer = null; }
+    cancelGridFill();
     function step() {
       var start = gridState.shown;
       if (start >= gridState.all.length) { gridState.timer = null; return; }
       var end = Math.min(start + GRID_PAGE, gridState.all.length);
       appendGridChunk(root, start, end);
       if (end >= gridState.all.length) { gridState.timer = null; return; }
-      if (typeof requestIdleCallback === 'function') {
-        gridState.timer = requestIdleCallback(step, { timeout: 600 });
-      } else {
-        gridState.timer = setTimeout(step, 40);
-      }
+      scheduleNextFill(step);
     }
-    if (typeof requestIdleCallback === 'function') {
-      gridState.timer = requestIdleCallback(step, { timeout: 600 });
-    } else {
-      gridState.timer = setTimeout(step, 40);
-    }
+    scheduleNextFill(step);
   }
 
   function renderGrid(root, all) {
-    if (gridState.timer) { clearTimeout(gridState.timer); gridState.timer = null; }
+    cancelGridFill();
     var list = applyFilters(all);
     gridState.all = list;
     gridState.shown = 0;
@@ -317,14 +372,26 @@
   function chipRow(label, values, key, counts) {
     if (!values.length) return '';
     var chips = values.map(function (v) {
-      var active = STATE.filters[key] === String(v) ? ' active' : '';
+      var isActive = STATE.filters[key] === String(v);
+      var active = isActive ? ' active' : '';
       var n = counts[key][v] || 0;
       return '<button type="button" class="chip' + active + '" data-filter="' + key +
-        '" data-value="' + esc(v) + '">' + esc(v) +
+        '" data-value="' + esc(v) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '">' + esc(v) +
         ' <span class="chip-count">' + n + '</span></button>';
     }).join('');
     return '<div class="filter-row"><span class="filter-label">' + esc(label) +
       '</span>' + chips + '</div>';
+  }
+
+  function setChipsActive() {
+    // Keep every chip's visual state and aria-pressed in sync with STATE.
+    $all('.chip').forEach(function (c) {
+      var k = c.getAttribute('data-filter');
+      var v = c.getAttribute('data-value');
+      var isActive = STATE.filters[k] === v;
+      c.classList.toggle('active', isActive);
+      c.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
   }
 
   function buildFilters(sofas) {
@@ -358,11 +425,7 @@
       var key = chip.getAttribute('data-filter');
       var value = chip.getAttribute('data-value');
       STATE.filters[key] = STATE.filters[key] === value ? null : value;
-      $all('.chip', wrap).forEach(function (c) {
-        var k = c.getAttribute('data-filter');
-        var v = c.getAttribute('data-value');
-        c.classList.toggle('active', STATE.filters[k] === v);
-      });
+      setChipsActive();
       renderGrid(grid, sofas);
       updateFilterUi();
       closeFiltersOnMobile();
@@ -439,7 +502,7 @@
       var search = $('#catalog-search');
       if (search) search.value = '';
     }
-    $all('.chip').forEach(function (c) { c.classList.remove('active'); });
+    $all('.chip').forEach(function (c) { c.classList.remove('active'); c.setAttribute('aria-pressed', 'false'); });
     renderGrid(grid, sofas);
     updateFilterUi();
   }
@@ -459,11 +522,7 @@
       var pill = ev.target.closest ? ev.target.closest('.pill') : null;
       if (!pill) return;
       STATE.filters[pill.getAttribute('data-filter')] = null;
-      $all('.chip').forEach(function (c) {
-        var k = c.getAttribute('data-filter');
-        var v = c.getAttribute('data-value');
-        c.classList.toggle('active', STATE.filters[k] === v);
-      });
+      setChipsActive();
       renderGrid(grid, sofas);
       updateFilterUi();
     });
@@ -492,7 +551,7 @@
     if (full) full.setAttribute('href', photo);
   }
 
-  function openModal(id) {
+  function openModal(id, trigger) {
     var sofa = CATALOG.filter(function (s) { return s.id === id; })[0];
     if (!sofa) return;
     var modal = $('#product-modal');
@@ -500,6 +559,10 @@
     var img = $('#modal-image');
     var thumbWrap = $('#modal-thumbs');
     modalSofa = sofa;
+    lastModalTrigger = trigger ||
+      (document.activeElement && document.activeElement.classList &&
+        document.activeElement.classList.contains('sofa-media-btn')
+        ? document.activeElement : null);
     if (resetModalWow) resetModalWow();
     img.src = sofa.photos[0];
     img.alt = sofa.name;
@@ -549,6 +612,12 @@
     if (!modal || modal.hidden) return;
     modal.hidden = true;
     document.body.classList.remove('modal-open');
+    // Return focus to the card that opened the dialog (standard a11y pattern;
+    // also restores the user's place in the page).
+    if (lastModalTrigger && typeof lastModalTrigger.focus === 'function') {
+      try { lastModalTrigger.focus(); } catch (e) {}
+    }
+    lastModalTrigger = null;
   }
 
   function bindModal() {
@@ -574,6 +643,7 @@
   var CATALOG = [];
   var modalSofa = null;
   var resetModalWow = null;
+  var lastModalTrigger = null;
 
   function applyStoreConfig(store) {
     if (!store) return;
@@ -623,7 +693,10 @@
     bindFilterClicks(sofas, grid);
     bindClearButton(sofas, grid);
     initFilterPanel(sofas, grid);
-    bindModal();
+    // NOTE: modal wiring lives in boot() now — the product modal also exists
+    // on the home page (featured grid), so its close button / backdrop / ESC
+    // keys must be bound there too. Binding it only here previously left
+    // home-page visitors trapped inside an unclosable modal.
 
     var search = $('#catalog-search');
     if (search) {
@@ -646,11 +719,7 @@
       if (v) STATE.filters[key] = v;
     });
     renderGrid(grid, sofas);
-    $all('.chip').forEach(function (c) {
-      var k = c.getAttribute('data-filter');
-      var v = c.getAttribute('data-value');
-      c.classList.toggle('active', STATE.filters[k] === v);
-    });
+    setChipsActive();
     updateFilterUi();
   }
 
@@ -699,6 +768,18 @@
   var REDUCED_MOTION = !!(window.matchMedia &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+  /* Is `el` already inside the viewport, with a little headroom below the
+     fold? Used as a synchronous fallback for reveal-on-scroll: the reveal
+     observer below must use threshold: 0 because the catalog grid is taller
+     than any viewport (a percentage threshold on a 40,000px+ grid is
+     unreachable, which left every card invisible). */
+  function isRevealCandidate(el) {
+    var r = el.getBoundingClientRect();
+    var vh = window.innerHeight || (document.documentElement &&
+      document.documentElement.clientHeight) || 0;
+    return r.top < vh * 1.15 && r.bottom > 0;
+  }
+
   function observeReveal(root) {
     var nodes = $all('.reveal', root || document);
     if (!nodes.length) return;
@@ -713,9 +794,17 @@
           io.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.08, rootMargin: '0px 0px -5% 0px' });
+    }, { threshold: 0, rootMargin: '0px 0px -5% 0px' });
     nodes.forEach(function (n) {
-      if (!n.classList.contains('in-view')) io.observe(n);
+      if (n.classList.contains('in-view')) return;
+      // Synchronous fallback: anything already on screen (e.g. the catalog
+      // grid after boot, or a scroll-restored reload mid-page) reveals now
+      // instead of racing the observer's first async callback.
+      if (isRevealCandidate(n)) {
+        n.classList.add('in-view');
+        return;
+      }
+      io.observe(n);
     });
   }
 
@@ -946,6 +1035,19 @@
     });
   }
 
+  /* Cheap structural fingerprint of a normalized catalog: per-product id and
+     photo list. The embedded .js data and the .json files are generated
+     together, so in the normal case they are identical — re-rendering an
+     identical catalog mid-session only causes a visible flash and resets
+     image loading, so we skip it. */
+  function catalogFingerprint(list) {
+    var parts = new Array(list.length);
+    for (var i = 0; i < list.length; i++) {
+      parts[i] = list[i].id + ':' + (list[i].photos || []).join('|');
+    }
+    return parts.join('~');
+  }
+
   /* Background refresh from the JSON files (never blocking, never fatal). */
   function refreshDataFromJson() {
     if (typeof fetch !== 'function') return;
@@ -955,6 +1057,15 @@
     ]).then(function (results) {
       var sofas = normalizeSofas(results[1]);
       if (!sofas.length) return; // keep the already-rendered embedded data
+      var storeSame = false;
+      try {
+        storeSame = !!(window.MSC_STORE && results[0] &&
+          JSON.stringify(results[0]) === JSON.stringify(window.MSC_STORE));
+      } catch (e) { storeSame = false; }
+      if (CATALOG.length && storeSame &&
+          catalogFingerprint(CATALOG) === catalogFingerprint(sofas)) {
+        return; // nothing actually changed — keep the rendered DOM untouched
+      }
       CATALOG = sofas;
       applyStoreConfig(results[0]);
       var grid = $('#catalog-grid');
@@ -989,6 +1100,9 @@
     safeInit(initChrome);
     safeInit(initMotion);
     safeInit(initWow);
+    // Product modal exists on BOTH pages (featured grid on home uses it too),
+    // so bind its close/ESC/backdrop/thumbnail handlers once at boot.
+    safeInit(bindModal);
     loadData().then(function (results) {
       var store = results[0];
       var sofas = normalizeSofas(results[1]);

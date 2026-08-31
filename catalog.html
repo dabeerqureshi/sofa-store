@@ -110,7 +110,7 @@
           <input type="search" id="catalog-search" placeholder="Search sofas — try “sectional”, “white”, “leather”…" autocomplete="off" aria-label="Search sofas">
         </div>
         <div class="toolbar-controls">
-          <div class="toolbar-meta" id="results-count">Loading catalogue…</div>
+          <div class="toolbar-meta" id="results-count" aria-live="polite">Loading catalogue…</div>
           <div class="sort-wrap">
             <label for="catalog-sort">Sort</label>
             <select id="catalog-sort">
@@ -231,6 +231,9 @@
 <a href="#" class="wa-float" data-wa-link data-wa-type="general" aria-label="Chat on WhatsApp" rel="noopener">
   <svg width="26" height="26"><use href="#i-wa"/></svg>
 </a>
+<button class="to-top" id="to-top" type="button" aria-label="Back to top">
+  <svg width="20" height="20"><use href="#i-chev"/></svg>
+</button>
 <script src="data/store.js"></script>
 <script src="data/sofas.js"></script>
 <script src="assets/js/app.js"></script>
