@@ -38,6 +38,12 @@
     toastTimer = setTimeout(function () { el.classList.remove('show'); }, 3200);
   }
 
+  /* Fetch timeout budget. Mobile connections can be slow or briefly stalled;
+     a too-small timeout causes an endless error->refresh loop on phones, so
+     keep this generous. The network fetch is only a fallback for the
+     embedded data scripts that render instantly. */
+  var FETCH_TIMEOUT_MS = 20000;
+
   /* Like fetchJson but aborts the request after `ms` so a slow/hung network
      request can never leave the catalog stuck on "Loading…". */
   function fetchJsonWithTimeout(url, ms) {
@@ -782,6 +788,13 @@
 
   function observeReveal(root) {
     var nodes = $all('.reveal', root || document);
+    // The catalog grid container itself carries the .reveal class; include it
+    // so it is watched/revealed too (a grid starting just below the fold
+    // could otherwise stay at opacity:0 on small screens).
+    if (root && root.classList && root.classList.contains &&
+        root.classList.contains('reveal') && nodes.indexOf(root) === -1) {
+      nodes.push(root);
+    }
     if (!nodes.length) return;
     if (REDUCED_MOTION || !('IntersectionObserver' in window)) {
       nodes.forEach(function (n) { n.classList.add('in-view'); });
@@ -1019,14 +1032,13 @@
     // network request, so a slow/hung/blocked request can no longer blank the
     // catalog page.
     if (window.MSC_STORE && window.MSC_DATA) {
-      refreshDataFromJson();
       return Promise.resolve([window.MSC_STORE, window.MSC_DATA]);
     }
     // Only reached if the embedded data scripts are missing. Guard every
     // request with a hard timeout so the catalog can never hang.
     return Promise.all([
-      fetchJsonWithTimeout('data/store.json', 6000),
-      fetchJsonWithTimeout('data/sofas.json', 6000)
+      fetchJsonWithTimeout('data/store.json', FETCH_TIMEOUT_MS),
+      fetchJsonWithTimeout('data/sofas.json', FETCH_TIMEOUT_MS)
     ]).catch(function (fetchErr) {
       if (window.MSC_STORE && window.MSC_DATA) {
         return [window.MSC_STORE, window.MSC_DATA];
@@ -1048,42 +1060,35 @@
     return parts.join('~');
   }
 
-  /* Background refresh from the JSON files (never blocking, never fatal). */
+  /* Background refresh from the JSON files (never blocking, never fatal). Only
+     the catalog JSON is re-fetched: it drives any re-render, and skipping the
+     identical store.json avoids a wasted request on mobile that would compete
+     with the sofa thumbnails for bandwidth. */
   function refreshDataFromJson() {
     if (typeof fetch !== 'function') return;
-    Promise.all([
-      fetchJsonWithTimeout('data/store.json', 6000),
-      fetchJsonWithTimeout('data/sofas.json', 6000)
-    ]).then(function (results) {
-      var sofas = normalizeSofas(results[1]);
-      if (!sofas.length) return; // keep the already-rendered embedded data
-      var storeSame = false;
-      try {
-        storeSame = !!(window.MSC_STORE && results[0] &&
-          JSON.stringify(results[0]) === JSON.stringify(window.MSC_STORE));
-      } catch (e) { storeSame = false; }
-      if (CATALOG.length && storeSame &&
-          catalogFingerprint(CATALOG) === catalogFingerprint(sofas)) {
-        return; // nothing actually changed — keep the rendered DOM untouched
-      }
-      CATALOG = sofas;
-      applyStoreConfig(results[0]);
-      var grid = $('#catalog-grid');
-      if (grid) renderGrid(grid, CATALOG);
-      var featured = $('#featured-grid');
-      if (featured) {
-        featured.innerHTML = CATALOG.slice(0, 12)
-          .map(function (s) { return cardHtml(s); }).join('');
-      }
-      updateStockCount(CATALOG);
-    }).catch(function (err) {
-      // Non-fatal: embedded data already rendered the page.
-      if (window.console && console.debug) {
-        console.debug('Montreal Sofa Co.: JSON refresh skipped', err);
-      }
-    });
+    fetchJsonWithTimeout('data/sofas.json', FETCH_TIMEOUT_MS)
+      .then(function (raw) {
+        var sofas = normalizeSofas(raw);
+        if (!sofas.length) return; // keep the already-rendered embedded data
+        if (CATALOG.length &&
+            catalogFingerprint(CATALOG) === catalogFingerprint(sofas)) {
+          return; // nothing changed - keep the rendered DOM untouched
+        }
+        CATALOG = sofas;
+        var grid = $('#catalog-grid');
+        if (grid) renderGrid(grid, CATALOG);
+        var featured = $('#featured-grid');
+        if (featured) {
+          featured.innerHTML = CATALOG.slice(0, 12)
+            .map(function (s) { return cardHtml(s); }).join("");
+        }
+        updateStockCount(CATALOG);
+      }).catch(function (err) {
+        if (window.console && console.debug) {
+          console.debug("Montreal Sofa Co.: JSON refresh skipped", err);
+        }
+      });
   }
-
   /* Run a boot step and isolate any error so it can never stop the rest of
      the page (including the catalog) from rendering. */
   function safeInit(fn) {
@@ -1094,35 +1099,77 @@
     }
   }
 
+
+  /* Mount the catalog + site chrome from a store object and a normalized list
+     of sofas. Shared by the happy path and the embedded-data fallback. */
+  function renderCatalog(store, sofas) {
+    if (!sofas || !sofas.length) throw new Error('catalog data contains no sofas');
+    CATALOG = sofas;
+    applyStoreConfig(store);
+    initCatalogPage(sofas);
+    initIndexPage(sofas);
+    updateStockCount(sofas);
+    animateStockCounters(sofas.length);
+  }
+
+  var BOOT_MAX_RETRIES = 3;
+  var BOOT_RETRY_DELAY = 1500; // ms, grows with each attempt
+
   function boot() {
-    // Each chrome/motion step is isolated so a failure in one subsystem can
-    // never prevent the catalog from rendering.
     safeInit(initChrome);
     safeInit(initMotion);
     safeInit(initWow);
-    // Product modal exists on BOTH pages (featured grid on home uses it too),
-    // so bind its close/ESC/backdrop/thumbnail handlers once at boot.
     safeInit(bindModal);
-    loadData().then(function (results) {
-      var store = results[0];
-      var sofas = normalizeSofas(results[1]);
-      if (!sofas.length) throw new Error('catalog data contains no sofas');
-      CATALOG = sofas;
-      applyStoreConfig(store);
-      initCatalogPage(sofas);
-      initIndexPage(sofas);
-      updateStockCount(sofas);
-      animateStockCounters(sofas.length);
-    }).catch(function (err) {
-      console.error('Montreal Sofa Co.: failed to load site data', err);
-      var grid = $('#catalog-grid') || $('#featured-grid');
-      if (grid) {
-        grid.innerHTML = '<p class="noscript-note">We could not load the catalogue. ' +
-          'Please refresh the page in a moment.</p>';
+
+    var grid = $('#catalog-grid') || $('#featured-grid');
+    var embeddedStore = window.MSC_STORE || null;
+    var embeddedSofas = window.MSC_DATA ? normalizeSofas(window.MSC_DATA) : [];
+
+    function scheduleRefreshIfEmbedded() {
+      // Refresh the catalog JSON in the background only on the normal
+      // embedded-data path, and only after the page has painted, so a deploy
+      // update is picked up without the re-fetch competing with the sofa
+      // thumbnails for the visitor's connection.
+      if (window.MSC_STORE && window.MSC_DATA) {
+        setTimeout(refreshDataFromJson, 450);
       }
-      var meta = $('#results-count');
-      if (meta) meta.textContent = 'Catalogue unavailable';
-    });
+    }
+
+    function tryLoad(attempt) {
+      loadData().then(function (results) {
+        renderCatalog(results[0], normalizeSofas(results[1]));
+        scheduleRefreshIfEmbedded();
+      }).catch(function (err) {
+        console.error('Montreal Sofa Co.: failed to load site data', err);
+        // Embedded data already provides a working catalog - render it rather
+        // than forcing the visitor to manually refresh.
+        if (embeddedStore && embeddedSofas.length) {
+          try { renderCatalog(embeddedStore, embeddedSofas); return; }
+          catch (renderErr) { console.error(renderErr); }
+        }
+        // Otherwise retry a few times with backoff before giving up, so a
+        // flaky mobile connection never lands visitors in a refresh loop.
+        if (attempt < BOOT_MAX_RETRIES) {
+          if (grid) {
+            grid.innerHTML =
+              '<p class="noscript-note">Loading catalogue… please wait.</p>';
+          }
+          var meta = $('#results-count');
+          if (meta) meta.textContent = 'Loading catalogue…';
+          setTimeout(function () { tryLoad(attempt + 1); },
+            BOOT_RETRY_DELAY * attempt);
+          return;
+        }
+        if (grid) {
+          grid.innerHTML = '<p class="noscript-note">We could not load the catalogue. ' +
+            'Please check your connection and try again.</p>';
+        }
+        var meta2 = $('#results-count');
+        if (meta2) meta2.textContent = 'Catalogue unavailable';
+      });
+    }
+
+    tryLoad(1);
   }
 
   if (document.readyState === 'loading') {
