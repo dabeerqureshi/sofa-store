@@ -270,49 +270,22 @@
     }).length;
   }
 
-  /* Progressive, parallel grid rendering.
-     The first viewport-worth of cards render immediately and eagerly (so the
-     page paints instantly instead of staying empty), then the remaining cards
-     are appended in small idle-time batches. This way ALL sofas appear and
-     their images load in parallel — with no scrolling or clicking needed —
-     while the DOM is built incrementally to keep the first paint fast. Each
-     card uses a tiny thumbnail, keeping the total payload (~5 MB) and memory
-     footprint low. */
-  var GRID_PAGE = 24;       // cards appended per build batch
-  var GRID_EAGER = 12;      // first N cards load eagerly (above the fold)
+  /* Paged, memory-safe grid rendering.
+     Only a small visible batch of cards is ever inserted into the DOM; the
+     rest are added on demand via a "Load more" button. On low-end phones
+     this stops the browser from trying to build and cache all 252 cards
+     (and their images) at once - the most common cause of the catalog page
+     crashing on mobile. Each card uses a tiny thumbnail too, so the total
+     memory footprint stays low.
+  */
+  var GRID_INITIAL = 12;    // cards shown on first paint
+  var GRID_MORE = 12;       // cards added per "Load more"
+  var GRID_EAGER = 6;       // first N cards load eagerly (above the fold)
   var GRID_PRIORITY = 6;    // first N cards get fetchpriority="high"
-  var gridState = { all: [], shown: 0, root: null, timer: null, idle: false };
-
-  /* Cancel the pending grid-fill step with the matching API:
-     requestIdleCallback handles are NOT setTimeout ids — clearTimeout cannot
-     reach them, which previously let stale steps survive a re-render. */
-  function cancelGridFill() {
-    if (gridState.timer == null) return;
-    if (gridState.idle && typeof cancelIdleCallback === 'function') {
-      cancelIdleCallback(gridState.timer);
-    } else {
-      clearTimeout(gridState.timer);
-    }
-    gridState.timer = null;
-    gridState.idle = false;
-  }
-
-  function scheduleNextFill(step) {
-    if (typeof requestIdleCallback === 'function') {
-      gridState.idle = true;
-      gridState.timer = requestIdleCallback(step, { timeout: 600 });
-    } else {
-      gridState.idle = false;
-      gridState.timer = setTimeout(step, 40);
-    }
-  }
+  var gridState = { all: [], shown: 0, root: null, total: 0 };
 
   /* Reveal a reveal-node immediately when it is already inside the (slightly
-     expanded) viewport. This is the deterministic fallback that fixes the
-     catalog: the 250-sofa grid is tens of thousands of pixels tall, so a
-     percentage IntersectionObserver threshold can never be met, and cards
-     used to stay at opacity:0 (invisible) on phones and after scroll-
-     restored reloads. */
+     expanded) viewport, so cards never stay hidden at opacity:0. */
   function maybeReveal(el) {
     if (!el || el.classList.contains('in-view')) return;
     if (REDUCED_MOTION || !('IntersectionObserver' in window) ||
@@ -338,42 +311,51 @@
     maybeReveal(root);
   }
 
-  /* Schedule the rest of the grid in idle-time batches; yields between batches
-     so the browser can paint and fetch images in parallel. */
-  function scheduleGridFill(root) {
-    cancelGridFill();
-    function step() {
-      var start = gridState.shown;
-      if (start >= gridState.all.length) { gridState.timer = null; return; }
-      var end = Math.min(start + GRID_PAGE, gridState.all.length);
-      appendGridChunk(root, start, end);
-      if (end >= gridState.all.length) { gridState.timer = null; return; }
-      scheduleNextFill(step);
+  /* Keep the "Showing X of Y" + Load more button in sync with how many
+     cards are currently in the DOM. */
+  function updateGridMeta() {
+    var list = gridState.all;
+    var shown = gridState.shown;
+    var total = gridState.total;
+    var allShown = shown >= list.length;
+    var info = $('#load-more-info');
+    if (info) {
+      info.textContent = 'Showing ' + shown + ' of ' + list.length + ' sofas' +
+        (allShown ? '' : ' - load more to see the rest');
     }
-    scheduleNextFill(step);
-  }
-
-  function renderGrid(root, all) {
-    cancelGridFill();
-    var list = applyFilters(all);
-    gridState.all = list;
-    gridState.shown = 0;
-    gridState.root = root;
-    root.innerHTML = '';
-    // Render the first page synchronously so the visible grid is instant.
-    if (list.length) appendGridChunk(root, 0, Math.min(GRID_PAGE, list.length));
-    // Fill the rest progressively and in parallel.
-    scheduleGridFill(root);
+    var wrap = $('#load-more-wrap');
+    if (wrap) wrap.hidden = !list.length || allShown;
     var meta = $('#results-count');
     if (meta) {
-      meta.innerHTML = list.length === all.length
+      meta.innerHTML = (list.length === total)
         ? '<span>' + list.length + ' sofas in stock</span>'
-        : '<span class="results-active">' + list.length + ' of ' + all.length +
+        : '<span class="results-active">' + list.length + ' of ' + total +
           ' sofas match</span>';
     }
     var empty = $('#empty-state');
     if (empty) empty.hidden = list.length !== 0;
   }
+
+  function loadMore(root) {
+    var list = gridState.all;
+    if (gridState.shown >= list.length) return;
+    var end = Math.min(gridState.shown + GRID_MORE, list.length);
+    appendGridChunk(root, gridState.shown, end);
+    updateGridMeta();
+  }
+
+  function renderGrid(root, all) {
+    var list = applyFilters(all);
+    gridState.all = list;
+    gridState.shown = 0;
+    gridState.root = root;
+    gridState.total = all.length;
+    root.innerHTML = '';
+    // Render a small first page synchronously so the visible grid is instant.
+    if (list.length) appendGridChunk(root, 0, Math.min(GRID_INITIAL, list.length));
+    updateGridMeta();
+  }
+
   /* ---------- Filter chips UI ---------- */
   function chipRow(label, values, key, counts) {
     if (!values.length) return '';
@@ -724,6 +706,12 @@
       var v = paramValue(key);
       if (v) STATE.filters[key] = v;
     });
+    // "Load more" reveals the next batch of cards on demand (keeps the DOM
+    // small on mobile so the page never crashes trying to build 252 cards).
+    var moreBtn = $('#load-more-btn');
+    if (moreBtn) {
+      moreBtn.addEventListener('click', function () { loadMore(grid); });
+    }
     renderGrid(grid, sofas);
     setChipsActive();
     updateFilterUi();

@@ -387,6 +387,12 @@ h3 { font-size: 1.12rem; color: var(--navy); }
 .catalog-section { padding-top: 2.2rem; }
 .results-active { color: var(--navy); }
 
+.load-more {
+  display: grid; gap: 0.55rem; justify-items: center;
+  margin-top: 2.4rem; text-align: center;
+}
+.load-more-info { font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+
 .empty-state {
   text-align: center; padding: 3.5rem 1rem;
   color: var(--muted); display: grid; gap: 0.7rem; justify-items: center;
