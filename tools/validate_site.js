@@ -78,7 +78,7 @@ function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed
     const m = html.match(/data-wa-link="([^"]+)"/);
     assert(m, 'data-wa-link missing from card markup');
     const url = decodeURIComponent(m[1]);
-    assert(m[1].startsWith('https://wa.me/923225532479?text='), 'wrong wa.me base: ' + m[1]);
+    assert(m[1].startsWith('https://wa.me/923144781120?text='), 'wrong wa.me base: ' + m[1]);
     assert(url.indexOf(sofa.name) !== -1, 'pre-filled message missing sofa name');
     assert(html.indexOf('href="' + m[1] + '"') !== -1, 'href does not match data-wa-link');
   });
