@@ -1,23 +1,17 @@
 {
-  "businessName": "Montreal Sofa Co.",
+  "businessName": "Canadian Sofa Co.",
   "tagline": "Premium Sofas. Delivered to Your Door.",
-  "deliveryArea": "Montreal only — all boroughs",
+  "deliveryArea": "Montreal & GTA (Toronto, Brampton, Mississauga & more)& Ottawa",
   "deliveryAreasList": [
-    "Plateau Mont-Royal",
-    "Mile End",
-    "Rosemont",
-    "NDG",
-    "Verdun",
-    "Saint-Laurent",
-    "Ahuntsic",
-    "Hochelaga",
-    "Villeray",
-    "Côte-des-Neiges",
-    "Lachine",
-    "Lasalle"
+    "Montreal",
+    "Toronto",
+    "Brampton",
+    "Mississauga",
+    "GTA (Greater Toronto Area)",
+    "Ottawa"
   ],
-  "deliveryHours": "Deliveries every Sunday — book your window on WhatsApp",
-  "whatsappDefaultMessage": "Hi Montreal Sofa Co.! I'm interested in one of your sofas. Do you deliver to my place in Montreal this Sunday? I'd pay cash on delivery.",
+  "deliveryHours": "Flexible delivery on the day that suits you — arranged per order on WhatsApp",
+  "whatsappDefaultMessage": "Hi Canadian Sofa Co.! I'm interested in one of your sofas. Do you deliver to my area (Montreal, GTA or Ottawa)and what delivery day can we arrange? I'd pay zero advance — cash on delivery.",
   "city": "Montreal",
   "province": "QC",
   "country": "Canada",
@@ -27,15 +21,17 @@
   "email": "hello@montrealsofaco.com",
   "hours": "7 days a week - 9 AM to 9 PM",
   "deliveryAreas": [
-    "Montreal"
+    "Montreal",
+    "GTA",
+    "Ottawa"
   ],
   "heroImage": "images/p01-1.jpg",
-  "deliveryNote": "Sunday delivery across Montreal only — every borough. Inspect your sofa at your door and pay cash on delivery.",
+  "deliveryNote": "Flexible delivery across Montreal, the GTA (Toronto, Brampton, Mississauga & more)and Ottawa — on a day that suits you, arranged by order. Pay zero advance — inspect your sofa at your door and pay cash on delivery.",
   "valueProps": [
     {
       "icon": "truck",
-      "title": "Sunday Delivery",
-      "text": "We deliver across Montreal every Sunday — book the window that suits you on WhatsApp."
+      "title": "Flexible Delivery Days",
+      "text": "We deliver across Montreal, GTA and Ottawa — on the day that suits you best, scheduled around your order on WhatsApp."
     },
     {
       "icon": "shield",
@@ -44,13 +40,13 @@
     },
     {
       "icon": "eye",
-      "title": "Cash on Delivery",
-      "text": "Inspect your sofa at your door and pay in cash only once you're fully satisfied."
+      "title": "0 Advance · Cash on Delivery",
+      "text": "Pay nothing in advance — inspect your sofa at your door and pay cash on delivery only once you're fully satisfied."
     },
     {
       "icon": "chat",
       "title": "Easy WhatsApp Ordering",
-      "text": "Chat with us directly on WhatsApp - ask questions, request photos, and book your Sunday slot in minutes."
+      "text": "Chat with us directly on WhatsApp - ask questions, request photos,and arrange your delivery day in minutes."
     }
   ],
   "howItWorks": [
@@ -66,13 +62,13 @@
     },
     {
       "step": "03",
-      "title": "Book a Sunday Slot",
-      "text": "We deliver across Montreal every Sunday. Reserve the delivery window that works for you."
+      "title": "Book Your Delivery Day",
+      "text": "We deliver across Montreal, GTA and Ottawa — we arrange a delivery day that suits you, based on your order."
     },
     {
       "step": "04",
-      "title": "Inspect & Pay Cash",
-      "text": "Check your sofa at your door. Pay cash on delivery only when you're fully satisfied."
+      "title": "Inspect & Pay Zero Advance",
+      "text": "Check your sofa at your door. Pay nothing in advance — full payment is cash on delivery, only when you're fully satisfied."
     }
   ]
 }

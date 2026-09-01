@@ -1,6 +1,6 @@
-# Montreal Sofa Co. — Sofa Catalog Website
+# Canadian Sofa Co. — Sofa Catalog Website
 
-A professional, mobile-first catalog website for a Montreal sofa business, hosted free on **GitHub Pages**.
+A professional, mobile-first catalog website for a Canadian sofa business, hosted free on **GitHub Pages**.
 
 Built with plain HTML, CSS and JavaScript — no backend, no build step, no dependencies.
 
@@ -22,19 +22,19 @@ The site never displays a phone number — visitors just tap **WhatsApp** button
 
 You can also adjust the tagline, service area, delivery areas, hours and delivery note in the same file.
 
-**Business model:** we deliver **only inside Montreal** (every borough), **only on Sundays**, and buyers **pay cash on delivery** after inspecting the sofa. All copy, schema.org data and pre-filled WhatsApp messages reflect this.
+**Business model:** we deliver across **Montreal, the GTA (Toronto, Brampton, Mississauga & more) and Ottawa**, with a **flexible delivery day arranged per order**, and buyers **pay zero advance — cash on delivery** after inspecting the sofa. All copy, schema.org data and pre-filled WhatsApp messages reflect this.
 
 ## 📄 Pages
 
 Your site has a home page and a catalogue page:
 
-- **Home / Hero** — brand, tagline, animated USP badges (Every Sunday · Cash on Delivery), trust list
-- **Why Us** — Sunday delivery, quality, cash on delivery, WhatsApp ordering
+- **Home / Hero** — brand, tagline, animated USP badges (0 Advance · Cash on Delivery), trust list
+- **Why Us** — flexible delivery days, quality, zero advance / cash on delivery, WhatsApp ordering
 - **Catalog** — all sofas in stock, with search + filters (seats, type, material, color) + sort
   - pricing is **contact-only**: every card shows a **Contact for Pricing** badge — no prices are published anywhere on the site
-  - every sofa has a **💬 WhatsApp button** that sends a pre-filled message naming that exact sofa and asking about Sunday delivery + cash price
+  - every sofa has a **💬 WhatsApp button** that sends a pre-filled message naming that exact sofa and asking about delivery to their area + cash-on-delivery pricing
   - click any photo for full details: full-size (uncropped) image, thumbnails, a **⬇ Download Image** button, a **View Full Image** link, a **3D Room** turntable view, a hover zoom loupe and double-tap zoom
-- **How It Works** — choose → WhatsApp → book a Sunday slot → inspect & pay cash
+- **How It Works** — choose → WhatsApp → book your delivery day → inspect & pay cash on delivery
 - **About** — brand story
 - **Contact** — WhatsApp CTA, service area, hours, delivery note
 - Floating WhatsApp bubble + footer
@@ -43,7 +43,7 @@ Your site has a home page and a catalogue page:
 
 ```bash
 git add -A
-git commit -m "Montreal Sofa Co. catalog site"
+git commit -m "Canadian Sofa Co. catalog site"
 git push origin main
 ```
 

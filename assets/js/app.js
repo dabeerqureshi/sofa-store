@@ -1,4 +1,4 @@
-/* Montreal Sofa Co. — app.js
+/* Canadian Sofa Co. — app.js
    Loads config from data/store.json and the catalogue from data/sofas.json.
    No dependencies. Works on index.html (featured) and catalog.html (full). */
 (function () {
@@ -81,7 +81,7 @@
   }
 
   var DEFAULT_WA_MESSAGE =
-    "Hi Montreal Sofa Co.! I'm interested in one of your sofas. Could you tell me more?";
+    "Hi Canadian Sofa Co.! I'm interested in one of your sofas. Could you tell me more?";
 
   /* Delegated clicks for every [data-wa-link] element, on both pages. */
   document.addEventListener('click', function (ev) {
@@ -178,8 +178,8 @@
   }
 
   function waMessage(sofa) {
-    return "Hi Montreal Sofa Co.! I'm interested in the " + sofa.name +
-      ". Is it available for Sunday delivery in Montreal? I'll pay cash on delivery - could you share the price?";
+    return "Hi Canadian Sofa Co.! I'm interested in the " + sofa.name +
+      ". Is it available for delivery to my area in Montreal, GTA or Ottawa? I'd pay zero advance — cash on delivery - could you share the price and what delivery day works?";
   }
 
   function cardHtml(sofa, opts) {
@@ -1073,7 +1073,7 @@
         updateStockCount(CATALOG);
       }).catch(function (err) {
         if (window.console && console.debug) {
-          console.debug("Montreal Sofa Co.: JSON refresh skipped", err);
+          console.debug("Canadian Sofa Co.: JSON refresh skipped", err);
         }
       });
   }
@@ -1082,7 +1082,7 @@
   function safeInit(fn) {
     try { fn(); } catch (err) {
       if (window.console && console.error) {
-        console.error('Montreal Sofa Co.: init step failed', err);
+        console.error('Canadian Sofa Co.: init step failed', err);
       }
     }
   }
@@ -1128,7 +1128,7 @@
         renderCatalog(results[0], normalizeSofas(results[1]));
         scheduleRefreshIfEmbedded();
       }).catch(function (err) {
-        console.error('Montreal Sofa Co.: failed to load site data', err);
+        console.error('Canadian Sofa Co.: failed to load site data', err);
         // Embedded data already provides a working catalog - render it rather
         // than forcing the visitor to manually refresh.
         if (embeddedStore && embeddedSofas.length) {
