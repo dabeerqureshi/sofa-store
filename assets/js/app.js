@@ -178,7 +178,7 @@
   }
 
   function waMessage(sofa) {
-    return "Hi Atelier Sofa Montreal! I'm interested in the " + sofa.name +
+    return "Hi Atelier Sofa Montreal! I'm interested in the " + sofa.name + " (item " + sofa.id + ")" +
       ". Is it available for delivery to my area in Montreal or the surrounding areas? I'd pay on delivery — cash or check, no advance required — could you share the price and custom sizes, fabrics and colors?";
   }
 
@@ -188,7 +188,6 @@
     if (sofa.seats) tags.push(esc(sofa.seats) + '-Seater');
     if (sofa.type) tags.push(esc(sofa.type));
     if (sofa.material) tags.push(esc(sofa.material));
-    if (sofa.color) tags.push(esc(sofa.color));
     var photoCount = sofa.photos.length > 1
       ? '<span class="sofa-count">' + sofa.photos.length + ' photos</span>' : '';
     var waMsg = waMessage(sofa);
@@ -385,10 +384,10 @@
   function buildFilters(sofas) {
     var wrap = $('#filter-groups');
     if (!wrap) return;
-    var values = { seats: [], type: [], material: [], color: [] };
-    var counts = { seats: {}, type: {}, material: {}, color: {} };
+    var values = { seats: [], type: [], material: [] };
+    var counts = { seats: {}, type: {}, material: {} };
     sofas.forEach(function (s) {
-      ['seats', 'type', 'material', 'color'].forEach(function (k) {
+      ['seats', 'type', 'material'].forEach(function (k) {
         if (!s[k]) return;
         var v = String(s[k]);
         if (values[k].indexOf(v) === -1) values[k].push(v);
@@ -396,12 +395,11 @@
       });
     });
     values.seats.sort(function (a, b) { return Number(a) - Number(b); });
-    ['type', 'material', 'color'].forEach(function (k) { values[k].sort(); });
+    ['type', 'material'].forEach(function (k) { values[k].sort(); });
     wrap.innerHTML =
       chipRow('Seats', values.seats, 'seats', counts) +
       chipRow('Style', values.type, 'type', counts) +
-      chipRow('Material', values.material, 'material', counts) +
-      chipRow('Colour', values.color, 'color', counts);
+      chipRow('Material', values.material, 'material', counts);
   }
 
   function bindFilterClicks(sofas, grid) {
@@ -520,7 +518,7 @@
   }
   /* ---------- Product modal ---------- */
   function downloadName(sofa, photo, index) {
-    var base = String(sofa.name || 'sofa').toLowerCase()
+    var base = String(sofa.id || sofa.name || 'sofa').toLowerCase()
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'sofa';
     var ext = String(photo).split('.').pop().toLowerCase();
     if (!/^[a-z0-9]{2,5}$/.test(ext)) ext = 'jpg';
