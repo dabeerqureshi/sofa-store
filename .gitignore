@@ -4,6 +4,9 @@
 # Raw photo archives (regenerate images/catalog via tools/build_catalog.py)
 /pictures/*.zip
 
+# New stock working folder (staging + raw zips)
+/new-stock/
+
 # Editor files
 .vscode/
 .idea/
