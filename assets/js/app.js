@@ -1,4 +1,4 @@
-/* Canadian Sofa Co. — app.js
+/* Atelier Sofa Montreal — app.js
    Loads config from data/store.json and the catalogue from data/sofas.json.
    No dependencies. Works on index.html (featured) and catalog.html (full). */
 (function () {
@@ -81,7 +81,7 @@
   }
 
   var DEFAULT_WA_MESSAGE =
-    "Hi Canadian Sofa Co.! I'm interested in one of your sofas. Could you tell me more?";
+    "Hi Atelier Sofa Montreal! I'm interested in one of your handcrafted sofas. Could you tell me more about pricing, sizing, fabrics and delivery across Montreal?";
 
   /* Delegated clicks for every [data-wa-link] element, on both pages. */
   document.addEventListener('click', function (ev) {
@@ -178,8 +178,8 @@
   }
 
   function waMessage(sofa) {
-    return "Hi Canadian Sofa Co.! I'm interested in the " + sofa.name +
-      ". Is it available for delivery to my area in Montreal, GTA or Ottawa? I'd pay zero advance — cash on delivery - could you share the price and what delivery day works?";
+    return "Hi Atelier Sofa Montreal! I'm interested in the " + sofa.name +
+      ". Is it available for delivery to my area in Montreal or the surrounding areas? I'd pay on delivery — cash or check, no advance required — could you share the price and custom sizes, fabrics and colors?";
   }
 
   function cardHtml(sofa, opts) {
@@ -578,7 +578,7 @@
       ? meta.map(function (m) { return '<span class="tag">' + m + '</span>'; }).join('')
       : '';
     $('#modal-desc').textContent = sofa.desc ||
-      'Premium sofa from our Montreal collection. Quality-checked, delivered to your door, and payable after inspection.';
+      'Premium handcrafted sofa from Atelier Sofa Montreal. Quality-checked, delivered to your door across Montreal, and payable on delivery.';
     var msg = waMessage(sofa);
     var waBtn = $('#modal-wa-btn');
     if (WA_READY) {
@@ -1073,7 +1073,7 @@
         updateStockCount(CATALOG);
       }).catch(function (err) {
         if (window.console && console.debug) {
-          console.debug("Canadian Sofa Co.: JSON refresh skipped", err);
+          console.debug("Atelier Sofa Montreal: JSON refresh skipped", err);
         }
       });
   }
@@ -1082,7 +1082,7 @@
   function safeInit(fn) {
     try { fn(); } catch (err) {
       if (window.console && console.error) {
-        console.error('Canadian Sofa Co.: init step failed', err);
+        console.error('Atelier Sofa Montreal: init step failed', err);
       }
     }
   }
@@ -1128,7 +1128,7 @@
         renderCatalog(results[0], normalizeSofas(results[1]));
         scheduleRefreshIfEmbedded();
       }).catch(function (err) {
-        console.error('Canadian Sofa Co.: failed to load site data', err);
+        console.error('Atelier Sofa Montreal: failed to load site data', err);
         // Embedded data already provides a working catalog - render it rather
         // than forcing the visitor to manually refresh.
         if (embeddedStore && embeddedSofas.length) {

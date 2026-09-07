@@ -1,59 +1,52 @@
 {
-  "businessName": "Canadian Sofa Co.",
-  "tagline": "Premium Sofas. Delivered to Your Door.",
-  "deliveryArea": "Montreal & GTA (Toronto, Brampton, Mississauga & more)& Ottawa",
+  "businessName": "Atelier Sofa Montreal",
+  "tagline": "Premium Handcrafted Sofas. Delivered Across Montreal.",
+  "deliveryArea": "Montreal & surrounding areas",
   "deliveryAreasList": [
-    "Montreal",
-    "Toronto",
-    "Brampton",
-    "Mississauga",
-    "GTA (Greater Toronto Area)",
-    "Ottawa"
+    "Montreal"
   ],
-  "deliveryHours": "Flexible delivery on the day that suits you — arranged per order on WhatsApp",
-  "whatsappDefaultMessage": "Hi Canadian Sofa Co.! I'm interested in one of your sofas. Do you deliver to my area (Montreal, GTA or Ottawa)and what delivery day can we arrange? I'd pay zero advance — cash on delivery.",
+  "deliveryHours": "Fast local delivery across Montreal & surrounding areas - order via WhatsApp and we arrange a day that suits you",
+  "whatsappDefaultMessage": "Hi Atelier Sofa Montreal! I'm interested in your premium handcrafted sofas. Do you deliver to my area in Montreal or the surrounding areas? Could you share pricing, custom sizes, fabrics and colors? I'd pay on delivery - cash or check, no advance required.",
   "city": "Montreal",
   "province": "QC",
   "country": "Canada",
   "currency": "CAD",
-  "whatsappNumber": "923144781120",
+  "whatsappNumber": "15793876581",
   "whatsappConfigured": true,
   "email": "qureshidabeer92@gmail.com",
-  "hours": "7 days a week - 9 AM to 9 PM",
+  "hours": "Open 24 hours, 7 days a week (always open)",
   "deliveryAreas": [
-    "Montreal",
-    "GTA",
-    "Ottawa"
+    "Montreal"
   ],
   "heroImage": "images/p01-1.jpg",
-  "deliveryNote": "Flexible delivery across Montreal, the GTA (Toronto, Brampton, Mississauga & more)and Ottawa — on a day that suits you, arranged by order. Pay zero advance — inspect your sofa at your door and pay cash on delivery.",
+  "deliveryNote": "No walk-in showroom - view the catalogue and order via WhatsApp. We offer fast local delivery across Montreal & surrounding areas. Pay on delivery - cash on delivery or check & pay - zero advance required. Just message us to order.",
   "valueProps": [
     {
       "icon": "truck",
-      "title": "Flexible Delivery Days",
-      "text": "We deliver across Montreal, GTA and Ottawa — on the day that suits you best, scheduled around your order on WhatsApp."
+      "title": "Handcrafted for Montreal",
+      "text": "Premium sofas built for Montreal homes, with custom sizes, fabrics and colors to match your space perfectly."
     },
     {
       "icon": "shield",
       "title": "Quality You Can Trust",
-      "text": "Every sofa is carefully inspected before it leaves us, so you can buy with confidence."
+      "text": "Every sofa is carefully inspected by our team before it reaches your door, so you can buy with confidence."
     },
     {
       "icon": "eye",
-      "title": "0 Advance · Cash on Delivery",
-      "text": "Pay nothing in advance — inspect your sofa at your door and pay cash on delivery only once you're fully satisfied."
+      "title": "Cash on Delivery & Check",
+      "text": "Pay zero advance - pay cash on delivery or by check once your sofa arrives. No advance required, no hidden fees."
     },
     {
       "icon": "chat",
-      "title": "Easy WhatsApp Ordering",
-      "text": "Chat with us directly on WhatsApp - ask questions, request photos,and arrange your delivery day in minutes."
+      "title": "Order on WhatsApp",
+      "text": "No walk-in showroom - message us on WhatsApp to order. We deliver fast across Montreal and the surrounding areas."
     }
   ],
   "howItWorks": [
     {
       "step": "01",
       "title": "Choose Your Sofa",
-      "text": "Browse the catalog and pick the sofa you love. Use the search and filters to find your match."
+      "text": "Browse our catalogue and pick the sofa you love - custom sizes, fabrics and colors available to suit your home."
     },
     {
       "step": "02",
@@ -62,13 +55,13 @@
     },
     {
       "step": "03",
-      "title": "Book Your Delivery Day",
-      "text": "We deliver across Montreal, GTA and Ottawa — we arrange a delivery day that suits you, based on your order."
+      "title": "Book Fast Delivery",
+      "text": "We deliver fast across Montreal & surrounding areas - we arrange a delivery that suits your schedule."
     },
     {
       "step": "04",
-      "title": "Inspect & Pay Zero Advance",
-      "text": "Check your sofa at your door. Pay nothing in advance — full payment is cash on delivery, only when you're fully satisfied."
+      "title": "Pay on Delivery",
+      "text": "No advance required. Pay cash on delivery or check & pay once your sofa arrives. Zero advance, zero hassle."
     }
   ]
 }

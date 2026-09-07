@@ -1,6 +1,6 @@
-# Canadian Sofa Co. — Sofa Catalog Website
+# Atelier Sofa Montreal — Sofa Catalog Website
 
-A professional, mobile-first catalog website for a Canadian sofa business, hosted free on **GitHub Pages**.
+A professional, mobile-first catalog website for **Atelier Sofa Montreal**, a Montreal sofa atelier, hosted free on **GitHub Pages**.
 
 Built with plain HTML, CSS and JavaScript — no backend, no build step, no dependencies.
 
@@ -22,7 +22,7 @@ The site never displays a phone number — visitors just tap **WhatsApp** button
 
 You can also adjust the tagline, service area, delivery areas, hours and delivery note in the same file.
 
-**Business model:** we deliver across **Montreal, the GTA (Toronto, Brampton, Mississauga & more) and Ottawa**, with a **flexible delivery day arranged per order**, and buyers **pay zero advance — cash on delivery** after inspecting the sofa. All copy, schema.org data and pre-filled WhatsApp messages reflect this.
+**Business model:** we build **premium handcrafted sofas for Montreal homes** — custom sizes, fabrics &amp; colors — with **fast local delivery across Montreal &amp; surrounding areas**. There is **no walk-in showroom** — customers view the catalogue and **order via WhatsApp**. Buyers **pay zero advance — 💵 Cash on Delivery | ✅ Check &amp; Pay**. Business hours: **always open (open 24 hours, 7 days a week)**. Contact: **+1 (579) 387-6581** · qureshidabeer92@gmail.com. All copy, schema.org data and pre-filled WhatsApp messages reflect this.
 
 ## 📄 Pages
 
@@ -43,7 +43,7 @@ Your site has a home page and a catalogue page:
 
 ```bash
 git add -A
-git commit -m "Canadian Sofa Co. catalog site"
+git commit -m "Atelier Sofa Montreal catalog site"
 git push origin main
 ```
 
