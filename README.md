@@ -31,7 +31,7 @@ Your site has a home page and a catalogue page:
 - **Home / Hero** — brand, tagline, animated USP badges (0 Advance · Cash on Delivery), trust list
 - **Why Us** — flexible delivery days, quality, zero advance / cash on delivery, WhatsApp ordering
 - **Catalog** — all sofas in stock, with search + filters (seats, type, material, color) + sort
-  - pricing is **contact-only**: every card shows a **Contact for Pricing** badge — no prices are published anywhere on the site
+  - pricing is **contact-only**: every card shows a **Contact on WhatsApp for details and pricing** badge — no prices are published anywhere on the site
   - every sofa has a **💬 WhatsApp button** that sends a pre-filled message naming that exact sofa and asking about delivery to their area + cash-on-delivery pricing
   - click any photo for full details: full-size (uncropped) image, thumbnails, a **⬇ Download Image** button, a **View Full Image** link, a **3D Room** turntable view, a hover zoom loupe and double-tap zoom
 - **How It Works** — choose → WhatsApp → book your delivery day → inspect & pay cash on delivery
@@ -96,7 +96,7 @@ The catalog lives in **`data/sofas.json`** (generated). Each entry:
 ```
 
 - `available: false` hides a sofa without deleting it
-- pricing is **contact-only**: the catalog always shows **"Contact for Pricing"**, and the generator never publishes prices
+- pricing is **contact-only**: the catalog always shows **"Contact on WhatsApp for details and pricing"**, and the generator never publishes prices
 
 ### Adding / updating sofas (from new photos)
 
@@ -129,7 +129,7 @@ git push origin main
 
 ### Quick edits without the generator
 
-You can edit `data/sofas.json` by hand. To hide a sofa, flip `available` to `false`. Pictures must already be in `images/` and referenced by their path. Pricing stays contact-only — the site shows **"Contact for Pricing"** on every sofa.
+You can edit `data/sofas.json` by hand. To hide a sofa, flip `available` to `false`. Pictures must already be in `images/` and referenced by their path. Pricing stays contact-only — the site shows **"Contact on WhatsApp for details and pricing"** on every sofa.
 
 ## 🗂 Project structure
 

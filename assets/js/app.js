@@ -174,7 +174,7 @@
   }
 
   function priceHtml() {
-    return '<span class="price-contact">Contact for Pricing</span>';
+    return '<span class="price-contact">Contact on WhatsApp for details and pricing</span>';
   }
 
   function waMessage(sofa) {
@@ -568,7 +568,7 @@
     }
     $('#modal-title').textContent = sofa.name;
     $('#modal-price').innerHTML =
-      '<span class="price-contact price-contact-lg">Contact for Pricing</span>';
+      '<span class="price-contact price-contact-lg">Contact on WhatsApp for details and pricing</span>';
     var meta = [];
     if (sofa.seats) meta.push(esc(sofa.seats) + '-Seater');
     if (sofa.type) meta.push(esc(sofa.type));
